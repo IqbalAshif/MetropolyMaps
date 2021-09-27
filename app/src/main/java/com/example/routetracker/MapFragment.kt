@@ -287,7 +287,7 @@ class MapFragment : Fragment(), LocationListener, SensorEventListener {
             Log.d("STEPCOUNT", "values: ${p0.values.toString()}")
             if (stepsTotal != null) {
                 val valueToAdd = p0.values[0] - stepsTotal!!
-                stepCount.tag = stepCount.tag as Int + valueToAdd
+                stepCount.tag = ((stepCount.tag as Int) + valueToAdd).toInt()
                 "Steps: ${stepCount.tag}".also { stepCount.text = it }
             }
 
