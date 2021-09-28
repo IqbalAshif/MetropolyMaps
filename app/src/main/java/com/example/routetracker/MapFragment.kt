@@ -7,7 +7,6 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
 import android.graphics.Color
-import android.graphics.Point
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -16,7 +15,6 @@ import android.location.Geocoder
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
-import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -28,9 +26,7 @@ import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
-import androidx.preference.PreferenceManager
 import com.google.android.material.floatingactionbutton.FloatingActionButton
-import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
@@ -38,9 +34,13 @@ import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polyline
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import java.io.IOException
+import android.view.animation.Animation
+import android.view.animation.AnimationUtils
+import androidx.fragment.app.replace
+import androidx.preference.PreferenceManager
+import org.osmdroid.config.Configuration
 
 
 class MapFragment : Fragment(), LocationListener, SensorEventListener {
@@ -57,6 +57,11 @@ class MapFragment : Fragment(), LocationListener, SensorEventListener {
     private lateinit var path: Polyline
 
     private lateinit var toggle: FloatingActionButton
+    private lateinit var info: FloatingActionButton
+
+    // Animations
+    private lateinit var appear: Animation
+    private lateinit var disappear: Animation
 
     companion object {
         fun newInstance() = MapFragment()
@@ -69,10 +74,9 @@ class MapFragment : Fragment(), LocationListener, SensorEventListener {
         savedInstanceState: Bundle?
     ): View? {
         val view = inflater.inflate(R.layout.fragment_map, container, false)
-
-
         super.onCreate(savedInstanceState)
-        Configuration.getInstance()
+
+       Configuration.getInstance()
             .load(context, PreferenceManager.getDefaultSharedPreferences(context))
 
         // Stepcounter
@@ -89,19 +93,40 @@ class MapFragment : Fragment(), LocationListener, SensorEventListener {
         map.controller.setZoom(3.0)
         createOverlays()
 
-        // Fab
+        // Gps Fab
         toggle = view.findViewById<FloatingActionButton>(R.id.toggle)
         toggle.tag = false // Recording?
         toggle.backgroundTintList = ColorStateList.valueOf(Color.GREEN + Color.GREEN * 40 / 100)
-        toggle.setOnClickListener {
+        toggle.setOnClickListener{toggleGps()}
 
-            if (toggle.tag == false && requestPermissions())
-                enableGps() // Start recording
-            else
-                disableGps() // Stop recording
+        // Info Fab
+        info = view.findViewById<FloatingActionButton>(R.id.info)
+        info.setOnClickListener {
+            parentFragmentManager.beginTransaction().hide(this)
+                .add(R.id.fragmentContainerView, DashboardFragment.newInstance())
+                .addToBackStack("")
+                .commit()
         }
 
+        // Animations
+        appear = AnimationUtils.loadAnimation(context, R.anim.appear)
+        disappear = AnimationUtils.loadAnimation(context, R.anim.disappear)
+
         return view
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        lm.removeUpdates(this)
+        disableStepSensor()
+    }
+
+    private fun toggleGps()
+    {
+        if (toggle.tag == false && requestPermissions())
+            enableGps() // Start recording
+        else
+            disableGps() // Stop recording
     }
 
     @SuppressLint("MissingPermission")
@@ -124,8 +149,16 @@ class MapFragment : Fragment(), LocationListener, SensorEventListener {
         }
     }
 
-    private fun disableGps() {
+    private fun onFirstLocation()
+    {
+        map.controller.setZoom(18.0)
+        info.startAnimation(appear)
+    }
+
+    private fun disableGps(animation: Boolean = true) {
         toggle.tag = false
+
+        if (animation) info.startAnimation(disappear)
 
         // Stop recording
         toggle.backgroundTintList =
@@ -227,7 +260,7 @@ class MapFragment : Fragment(), LocationListener, SensorEventListener {
             Toast.LENGTH_LONG
         ).show()
 
-        disableGps()
+        disableGps(false)
     }
 
     private fun locationProvider(): String? = when {
@@ -245,8 +278,9 @@ class MapFragment : Fragment(), LocationListener, SensorEventListener {
     override fun onLocationChanged(p0: Location) {
         Log.d("GEOLOCATION", "new latitude: ${p0.latitude} and longitude: ${p0.longitude}")
 
-        if (path.actualPoints.isEmpty())
-            map.controller.setZoom(18.0)
+        if (path.actualPoints.isEmpty()) {
+            onFirstLocation()
+        }
 
         val point = GeoPoint(p0.latitude, p0.longitude)
         map.controller.setCenter(point)

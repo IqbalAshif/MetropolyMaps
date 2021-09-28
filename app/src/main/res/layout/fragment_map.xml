@@ -7,6 +7,19 @@
     android:foregroundTint="#7C1F1F"
     tools:context=".MainActivity">
 
+    <org.osmdroid.views.MapView
+        android:id="@+id/map"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.0">
+
+    </org.osmdroid.views.MapView>
+
     <TextView
         android:id="@+id/steps"
         android:layout_width="wrap_content"
@@ -35,14 +48,20 @@
         app:srcCompat="@android:drawable/ic_menu_mylocation"
         tools:ignore="SpeakableTextPresentCheck" />
 
-    <org.osmdroid.views.MapView
-        android:id="@+id/map"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/info"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        android:clickable="true"
+        android:contentDescription="@string/info"
+        android:focusable="true"
+        android:visibility="invisible"
+        app:backgroundTint="@android:color/holo_green_dark"
+        app:fabSize="mini"
+        app:layout_constraintBottom_toTopOf="@+id/toggle"
+        app:layout_constraintEnd_toEndOf="@id/toggle"
+        app:layout_constraintStart_toStartOf="@+id/toggle"
+        app:srcCompat="@android:drawable/ic_menu_info_details" />
 
-    </org.osmdroid.views.MapView>
 </androidx.constraintlayout.widget.ConstraintLayout>
