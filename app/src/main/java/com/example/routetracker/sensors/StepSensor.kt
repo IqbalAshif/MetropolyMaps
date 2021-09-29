@@ -12,7 +12,7 @@ import com.example.routetracker.R
 class StepSensor(context : Context?) : SensorEventListener
 {
     private val sm: SensorManager = context?.getSystemService(Context.SENSOR_SERVICE) as SensorManager
-    private val sensor: Sensor = sm.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
+    val sensor: Sensor? = sm.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
 
     var onSensorTriggered : (SensorEvent) -> Unit = {}
     var onSensorStarted : () -> Unit = {}
@@ -27,12 +27,14 @@ class StepSensor(context : Context?) : SensorEventListener
     override fun onAccuracyChanged(p0: Sensor?, p1: Int) {}
 
     fun enable() {
-        sm.registerListener(this, sensor, SensorManager.SENSOR_DELAY_UI)
+        if(sensor != null)
+            sm.registerListener(this, sensor, SensorManager.SENSOR_DELAY_UI)
         onSensorStarted()
     }
 
     fun disable() {
-        sm.unregisterListener(this)
+        if(sensor != null)
+            sm.unregisterListener(this)
         onSensorStopped()
     }
 
