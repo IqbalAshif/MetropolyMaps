@@ -26,7 +26,6 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:elevation="16dp"
-        android:tag="0"
         android:textAlignment="center"
         android:textAllCaps="false"
         android:textSize="20sp"
