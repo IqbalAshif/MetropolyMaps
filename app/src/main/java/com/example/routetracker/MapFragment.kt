@@ -1,17 +1,9 @@
 package com.example.routetracker
 
-import android.Manifest
 import android.annotation.SuppressLint
-import android.app.Activity
 import android.content.Context
-import android.content.pm.PackageManager
 import android.content.res.ColorStateList
 import android.graphics.Color
-import android.hardware.Sensor
-import android.hardware.SensorEvent
-import android.hardware.SensorEventListener
-import android.hardware.SensorManager
-import android.location.Geocoder
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
@@ -20,39 +12,34 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.Animation
+import android.view.animation.AnimationUtils
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.fragment.app.Fragment
+import androidx.preference.PreferenceManager
+import com.example.routetracker.helpers.*
+import com.example.routetracker.sensors.StepSensor
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polyline
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import java.io.IOException
-import android.view.animation.Animation
-import android.view.animation.AnimationUtils
-import androidx.preference.PreferenceManager
-import com.example.routetracker.helpers.locationProvider
-import com.example.routetracker.helpers.requestLocationPermissions
-import com.example.routetracker.helpers.roundToDecimal
-import org.osmdroid.config.Configuration
-
-import com.example.routetracker.sensors.StepSensor
 import kotlin.math.roundToInt
 
 
 class MapFragment : Fragment(), LocationListener {
 
     private lateinit var lm: LocationManager
-
     private lateinit var stepSensor: StepSensor
+
     private lateinit var stepCount: TextView
-    var stepsTotal: Float? = null // Alltime stepcount
 
     lateinit var map: MapView
     private lateinit var marker: Marker
@@ -84,13 +71,14 @@ class MapFragment : Fragment(), LocationListener {
         // Stepcounter
         stepCount = view.findViewById<TextView>(R.id.steps)
         stepSensor = StepSensor(context)
-        stepSensor.onSensorStopped = { stepCount.text = ""}
-        stepSensor.onSensorTriggered = {
+        stepSensor.onStopped = { stepCount.text = ""}
+        stepSensor.onTriggered = {
             if(stepCount.tag != null && toggle.tag == true)
                 stepCount.text = (stepCount.text.toString().ifEmpty { "0" }.ifBlank { "0" }.toFloat() + it.values[0] - (stepCount.tag as Float)).roundToInt().toString()
 
             stepCount.tag = it.values[0]
         }
+
 
         // Map
         lm = this.context?.getSystemService(Context.LOCATION_SERVICE) as LocationManager
@@ -124,6 +112,17 @@ class MapFragment : Fragment(), LocationListener {
         // Animations
         appear = AnimationUtils.loadAnimation(context, R.anim.appear)
         disappear = AnimationUtils.loadAnimation(context, R.anim.disappear)
+
+        // Intents
+        // Location can be shown calling the following:
+        //val mapIntent = Intent(Intent.ACTION_VIEW, Uri.parse("geo:37.7749,-122.4194"))
+        //startActivity(mapIntent)
+
+        // Intent
+        if(activity != null && requireActivity().intent.data != null) {
+            map.controller.setCenter(parseLocation(requireActivity().intent.data.toString()))
+            map.controller.setZoom(18.0)
+        }
 
         return view
     }
@@ -217,8 +216,10 @@ class MapFragment : Fragment(), LocationListener {
     override fun onLocationChanged(p0: Location) {
         Log.d("GEOLOCATION", "new latitude: ${p0.latitude} and longitude: ${p0.longitude}")
 
-        if (path.actualPoints.isEmpty()) {
-            onFirstLocation()
+        if (path.actualPoints.isEmpty()) // First location
+        {
+            map.controller.setZoom(18.0)
+            info.startAnimation(appear)
         }
 
         val point = GeoPoint(p0.latitude, p0.longitude)
@@ -231,7 +232,7 @@ class MapFragment : Fragment(), LocationListener {
                 .toString()
 
         CoroutineScope(Dispatchers.IO).launch {
-            marker.subDescription = getAddress(point)
+            marker.subDescription = getAddress(context, point)
         }
         marker.alpha = 1f
 
@@ -239,22 +240,6 @@ class MapFragment : Fragment(), LocationListener {
         path.addPoint(point)
 
         map.invalidate()
-    }
-
-    private fun onFirstLocation()
-    {
-        map.controller.setZoom(18.0)
-        info.startAnimation(appear)
-    }
-
-    private fun getAddress(point: GeoPoint): String {
-        return try {
-            val geocoder = Geocoder(this.context)
-            val list = geocoder.getFromLocation(point.latitude, point.longitude, 1)
-            list[0].getAddressLine(0)
-        } catch (e: IOException) {
-            "" // Return empty if at a location without an address.
-        }
     }
 
 }

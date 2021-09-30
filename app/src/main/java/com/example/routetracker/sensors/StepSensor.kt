@@ -5,22 +5,19 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
-import android.util.Log
-import android.widget.TextView
-import com.example.routetracker.R
 
 class StepSensor(context : Context?) : SensorEventListener
 {
     private val sm: SensorManager = context?.getSystemService(Context.SENSOR_SERVICE) as SensorManager
     val sensor: Sensor? = sm.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
 
-    var onSensorTriggered : (SensorEvent) -> Unit = {}
-    var onSensorStarted : () -> Unit = {}
-    var onSensorStopped : () -> Unit = {}
+    var onTriggered : (SensorEvent) -> Unit = {}
+    var onStarted : () -> Unit = {}
+    var onStopped : () -> Unit = {}
 
     override fun onSensorChanged(p0: SensorEvent?) {
         if (p0 != null) {
-            onSensorTriggered(p0)
+            onTriggered(p0)
         }
     }
 
@@ -29,13 +26,13 @@ class StepSensor(context : Context?) : SensorEventListener
     fun enable() {
         if(sensor != null)
             sm.registerListener(this, sensor, SensorManager.SENSOR_DELAY_UI)
-        onSensorStarted()
+        onStarted()
     }
 
     fun disable() {
         if(sensor != null)
             sm.unregisterListener(this)
-        onSensorStopped()
+        onStopped()
     }
 
 }
