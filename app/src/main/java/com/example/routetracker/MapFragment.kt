@@ -7,7 +7,6 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
 import android.graphics.Color
-import android.graphics.Point
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -16,7 +15,6 @@ import android.location.Geocoder
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
-import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -25,12 +23,8 @@ import android.view.ViewGroup
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.content.res.AppCompatResources
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
-import androidx.preference.PreferenceManager
 import com.google.android.material.floatingactionbutton.FloatingActionButton
-import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
@@ -38,17 +32,25 @@ import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polyline
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import java.io.IOException
+import android.view.animation.Animation
+import android.view.animation.AnimationUtils
+import androidx.preference.PreferenceManager
+import com.example.routetracker.helpers.locationProvider
+import com.example.routetracker.helpers.requestLocationPermissions
+import com.example.routetracker.helpers.roundToDecimal
+import org.osmdroid.config.Configuration
+
+import com.example.routetracker.sensors.StepSensor
+import kotlin.math.roundToInt
 
 
-class MapFragment : Fragment(), LocationListener, SensorEventListener {
+class MapFragment : Fragment(), LocationListener {
 
     private lateinit var lm: LocationManager
 
-    private lateinit var sm: SensorManager
-    private var stepSensor: Sensor? = null
+    private lateinit var stepSensor: StepSensor
     private lateinit var stepCount: TextView
     var stepsTotal: Float? = null // Alltime stepcount
 
@@ -57,6 +59,11 @@ class MapFragment : Fragment(), LocationListener, SensorEventListener {
     private lateinit var path: Polyline
 
     private lateinit var toggle: FloatingActionButton
+    private lateinit var info: FloatingActionButton
+
+    // Animations
+    private lateinit var appear: Animation
+    private lateinit var disappear: Animation
 
     companion object {
         fun newInstance() = MapFragment()
@@ -69,16 +76,21 @@ class MapFragment : Fragment(), LocationListener, SensorEventListener {
         savedInstanceState: Bundle?
     ): View? {
         val view = inflater.inflate(R.layout.fragment_map, container, false)
-
-
         super.onCreate(savedInstanceState)
-        Configuration.getInstance()
+
+       Configuration.getInstance()
             .load(context, PreferenceManager.getDefaultSharedPreferences(context))
 
         // Stepcounter
-        sm = this.context?.getSystemService(Context.SENSOR_SERVICE) as SensorManager
-        stepSensor = sm.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
         stepCount = view.findViewById<TextView>(R.id.steps)
+        stepSensor = StepSensor(context)
+        stepSensor.onSensorStopped = { stepCount.text = ""}
+        stepSensor.onSensorTriggered = {
+            if(stepCount.tag != null && toggle.tag == true)
+                stepCount.text = (stepCount.text.toString().ifEmpty { "0" }.ifBlank { "0" }.toFloat() + it.values[0] - (stepCount.tag as Float)).roundToInt().toString()
+
+            stepCount.tag = it.values[0]
+        }
 
         // Map
         lm = this.context?.getSystemService(Context.LOCATION_SERVICE) as LocationManager
@@ -89,116 +101,47 @@ class MapFragment : Fragment(), LocationListener, SensorEventListener {
         map.controller.setZoom(3.0)
         createOverlays()
 
-        // Fab
+        // Gps Fab
         toggle = view.findViewById<FloatingActionButton>(R.id.toggle)
         toggle.tag = false // Recording?
         toggle.backgroundTintList = ColorStateList.valueOf(Color.GREEN + Color.GREEN * 40 / 100)
-        toggle.setOnClickListener {
-
-            if (toggle.tag == false && requestPermissions())
+        toggle.setOnClickListener{
+            if (toggle.tag == false && requestLocationPermissions(requireActivity()))
                 enableGps() // Start recording
             else
                 disableGps() // Stop recording
         }
 
+        // Info Fab
+        info = view.findViewById<FloatingActionButton>(R.id.info)
+        info.setOnClickListener {
+            parentFragmentManager.beginTransaction().hide(this)
+                .add(R.id.fragmentContainerView, DashboardFragment.newInstance())
+                .addToBackStack("")
+                .commit()
+        }
+
+        // Animations
+        appear = AnimationUtils.loadAnimation(context, R.anim.appear)
+        disappear = AnimationUtils.loadAnimation(context, R.anim.disappear)
+
         return view
     }
 
-    @SuppressLint("MissingPermission")
-    private fun enableGps() {
-        if (locationProvider() != null) {
-            enableStepSensor()
-            toggle.tag = true
-            toggle.backgroundTintList =
-                ColorStateList.valueOf(Color.RED + Color.RED * 40 / 100)
-            lm.requestLocationUpdates(locationProvider()!!, 1000, 15f, this)
-        } else {
-            Log.e("Location", "Insufficient permissions, location needed")
-            Toast.makeText(
-                this.context?.applicationContext,
-                "Insufficient permissions, location needed",
-                Toast.LENGTH_LONG
-            ).show()
-
-            requestPermissions()
-        }
-    }
-
-    private fun disableGps() {
-        toggle.tag = false
-
-        // Stop recording
-        toggle.backgroundTintList =
-            ColorStateList.valueOf(Color.GREEN + Color.GREEN * 40 / 100)
+    override fun onDestroy() {
+        super.onDestroy()
         lm.removeUpdates(this)
-
-        // Clear map
-        path.setPoints(listOf())
-        marker.alpha = 0f
-        marker.closeInfoWindow()
-        map.invalidate()
-
-        // Stop stepcounter
-        disableStepSensor()
+        stepSensor.disable()
     }
 
+    override fun onPause() {
+        super.onPause()
+        stepSensor.disable()
+    }
 
-    /* Permissions */
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {}
-
-    private fun hasLocationPermission(permission: String): Boolean =
-        (ContextCompat.checkSelfPermission(
-            this.requireContext(), permission
-        ) == PackageManager.PERMISSION_GRANTED)
-
-
-    private fun requestPermissions(): Boolean {
-        val requiredPermissions: MutableList<String> = mutableListOf()
-        var ret = true
-        if ((ContextCompat.checkSelfPermission(
-                this.requireContext(),
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED)
-        ) {
-            requiredPermissions.add(Manifest.permission.ACCESS_FINE_LOCATION)
-            ret = false
-        }
-        if ((ContextCompat.checkSelfPermission(
-                this.requireContext(),
-                Manifest.permission.ACCESS_COARSE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED)
-        ) {
-            requiredPermissions.add(Manifest.permission.ACCESS_COARSE_LOCATION)
-            ret = false
-        }
-        if ((ContextCompat.checkSelfPermission(
-                this.requireContext(),
-                Manifest.permission.READ_EXTERNAL_STORAGE
-            ) != PackageManager.PERMISSION_GRANTED)
-        ) {
-            requiredPermissions.add(Manifest.permission.READ_EXTERNAL_STORAGE)
-            ret = false
-        }
-        if ((ContextCompat.checkSelfPermission(
-                this.requireContext(),
-                Manifest.permission.WRITE_EXTERNAL_STORAGE
-            ) != PackageManager.PERMISSION_GRANTED)
-        ) {
-            requiredPermissions.add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
-        }
-
-        if (requiredPermissions.isNotEmpty())
-            ActivityCompat.requestPermissions(
-                this.requireContext() as Activity, requiredPermissions.toTypedArray(),
-                0
-            )
-
-        return ret
-
+    override fun onResume() {
+        super.onResume()
+        stepSensor.enable()
     }
 
     /* MAP */
@@ -219,6 +162,47 @@ class MapFragment : Fragment(), LocationListener, SensorEventListener {
     }
 
     /* Location */
+    @SuppressLint("MissingPermission")
+    private fun enableGps() {
+        if (locationProvider(requireContext()) != null) {
+            stepSensor.enable()
+            toggle.tag = true
+            toggle.backgroundTintList =
+                ColorStateList.valueOf(Color.RED + Color.RED * 40 / 100)
+            lm.requestLocationUpdates(locationProvider(requireContext())!!, 1000, 15f, this)
+        } else {
+            Log.e("Location", "Insufficient permissions, location needed")
+            Toast.makeText(
+                this.context?.applicationContext,
+                "Insufficient permissions, location needed",
+                Toast.LENGTH_LONG
+            ).show()
+
+            requestLocationPermissions(requireActivity())
+        }
+    }
+
+    private fun disableGps(animation: Boolean = true) {
+        toggle.tag = false
+
+        if (animation) info.startAnimation(disappear)
+
+        // Stop recording
+        toggle.backgroundTintList =
+            ColorStateList.valueOf(Color.GREEN + Color.GREEN * 40 / 100)
+        lm.removeUpdates(this)
+
+        // Clear map
+        path.setPoints(listOf())
+        marker.alpha = 0f
+        marker.closeInfoWindow()
+        map.invalidate()
+
+        // Stop stepcounter
+        stepSensor.disable()
+    }
+
+
     override fun onProviderEnabled(provider: String) {}
     override fun onProviderDisabled(provider: String) {
         Toast.makeText(
@@ -227,26 +211,15 @@ class MapFragment : Fragment(), LocationListener, SensorEventListener {
             Toast.LENGTH_LONG
         ).show()
 
-        disableGps()
-    }
-
-    private fun locationProvider(): String? = when {
-        hasLocationPermission(Manifest.permission.ACCESS_FINE_LOCATION) -> {
-            LocationManager.GPS_PROVIDER
-        }
-        hasLocationPermission(Manifest.permission.ACCESS_COARSE_LOCATION) -> {
-            LocationManager.NETWORK_PROVIDER
-        }
-        else -> {
-            null
-        }
+        disableGps(false)
     }
 
     override fun onLocationChanged(p0: Location) {
         Log.d("GEOLOCATION", "new latitude: ${p0.latitude} and longitude: ${p0.longitude}")
 
-        if (path.actualPoints.isEmpty())
-            map.controller.setZoom(18.0)
+        if (path.actualPoints.isEmpty()) {
+            onFirstLocation()
+        }
 
         val point = GeoPoint(p0.latitude, p0.longitude)
         map.controller.setCenter(point)
@@ -268,6 +241,12 @@ class MapFragment : Fragment(), LocationListener, SensorEventListener {
         map.invalidate()
     }
 
+    private fun onFirstLocation()
+    {
+        map.controller.setZoom(18.0)
+        info.startAnimation(appear)
+    }
+
     private fun getAddress(point: GeoPoint): String {
         return try {
             val geocoder = Geocoder(this.context)
@@ -276,61 +255,6 @@ class MapFragment : Fragment(), LocationListener, SensorEventListener {
         } catch (e: IOException) {
             "" // Return empty if at a location without an address.
         }
-    }
-
-    /* Sensors */
-
-    // Step
-    override fun onSensorChanged(p0: SensorEvent?) {
-        p0 ?: return
-        if (p0.sensor == stepSensor) {
-            Log.d("STEPCOUNT", "values: ${p0.values.toString()}")
-            if (stepsTotal != null) {
-                val valueToAdd = p0.values[0] - stepsTotal!!
-                stepCount.tag = ((stepCount.tag as Int) + valueToAdd).toInt()
-                "Steps: ${stepCount.tag}".also { stepCount.text = it }
-            }
-
-            stepsTotal = p0.values[0]
-        }
-
-    }
-
-    override fun onAccuracyChanged(p0: Sensor?, p1: Int) {}
-
-    override fun onPause() {
-        super.onPause()
-        if (stepSensor != null)
-            sm.unregisterListener(this)
-    }
-
-    override fun onResume() {
-        super.onResume()
-        if (stepSensor != null)
-            sm.registerListener(this, stepSensor, SensorManager.SENSOR_DELAY_UI)
-    }
-
-    private fun enableStepSensor() {
-        if (stepSensor != null) {
-            stepCount.tag = 0
-            stepCount.text = ""
-            sm.registerListener(this, stepSensor, SensorManager.SENSOR_DELAY_UI)
-        }
-    }
-
-    private fun disableStepSensor() {
-        if (stepSensor != null) {
-            sm.unregisterListener(this)
-            stepsTotal = null
-            stepCount.text = ""
-        }
-    }
-
-    // Math
-    private fun Double.roundToDecimal(decimals: Int): Double {
-        var multiplier = 1.0
-        repeat(decimals) { multiplier *= 10 }
-        return Math.round(this * multiplier) / multiplier
     }
 
 }
