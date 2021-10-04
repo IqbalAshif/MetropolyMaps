@@ -38,8 +38,10 @@ import org.osmdroid.views.overlay.Polyline
 import java.lang.NullPointerException
 import kotlin.math.roundToInt
 import androidx.core.graphics.scale
+import org.osmdroid.bonuspack.routing.RoadManager
 import org.osmdroid.events.MapAdapter
 import org.osmdroid.events.ZoomEvent
+import org.osmdroid.library.BuildConfig
 
 
 class MapFragment : Fragment(), LocationListener {
@@ -48,6 +50,10 @@ class MapFragment : Fragment(), LocationListener {
     private lateinit var stepSensor: StepSensor
 
     private lateinit var stepCount: TextView
+
+    //1
+    private lateinit var roadManager: RoadManager
+
 
     lateinit var map: MapView
     private lateinit var marker: Marker
@@ -133,9 +139,10 @@ class MapFragment : Fragment(), LocationListener {
                 .addToBackStack("")
                 .commit()
              */
-            fetchPointsOfInterest()
+            fetchPointsOfInterest("Restaurant")
         }
 
+        //bottom tab navigator
         // Animations
         appear = AnimationUtils.loadAnimation(context, R.anim.appear)
         disappear = AnimationUtils.loadAnimation(context, R.anim.disappear)
@@ -187,11 +194,11 @@ class MapFragment : Fragment(), LocationListener {
         map.overlays.add(marker)
     }
 
-    private fun fetchPointsOfInterest() {
+    private fun fetchPointsOfInterest(service: String) {
         CoroutineScope(Dispatchers.IO).launch {
             val poiProvider = NominatimPOIProvider(userAgent)
             try {
-                pois = poiProvider.getPOIInside(map.boundingBox, "Restaurant", 30)
+                pois = poiProvider.getPOIInside(map.boundingBox, service , 30)
                 Log.e("NewPois", pois.size.toString())
 
                 CoroutineScope(Dispatchers.Main).launch {

@@ -3,4 +3,8 @@
     <string name="record_location">record location</string>
     <string name="info">info</string>
     <string name="dashboard">Dashboard</string>
+    <string name="restaurant">Restaurant</string>
+    <string name="buss">Buss Stop</string>
+    <string name="supermarket">Supermarket</string>
+    Supermarket
 </resources>
