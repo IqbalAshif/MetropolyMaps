@@ -18,6 +18,7 @@ import android.view.animation.AnimationUtils
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.content.res.AppCompatResources
+import androidx.core.graphics.scale
 import androidx.fragment.app.Fragment
 import androidx.preference.PreferenceManager
 import com.example.routetracker.helpers.*
@@ -29,17 +30,15 @@ import kotlinx.coroutines.launch
 import org.osmdroid.bonuspack.location.NominatimPOIProvider
 import org.osmdroid.bonuspack.location.POI
 import org.osmdroid.config.Configuration
+import org.osmdroid.events.MapAdapter
+import org.osmdroid.events.ZoomEvent
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Overlay
 import org.osmdroid.views.overlay.Polyline
-import java.lang.NullPointerException
 import kotlin.math.roundToInt
-import androidx.core.graphics.scale
-import org.osmdroid.events.MapAdapter
-import org.osmdroid.events.ZoomEvent
 
 
 class MapFragment : Fragment(), LocationListener {
@@ -61,6 +60,10 @@ class MapFragment : Fragment(), LocationListener {
     // Animations
     private lateinit var appear: Animation
     private lateinit var disappear: Animation
+    private lateinit var rotateclock: Animation
+    private lateinit var rotateanticlock: Animation
+
+    private var panning = false
 
     companion object {
         fun newInstance() = MapFragment()
@@ -70,6 +73,7 @@ class MapFragment : Fragment(), LocationListener {
 
 
     /* UI */
+    @SuppressLint("ClickableViewAccessibility")
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -101,6 +105,7 @@ class MapFragment : Fragment(), LocationListener {
         map.isTilesScaledToDpi = true
         map.setMultiTouchControls(true)
         map.controller.setZoom(3.0)
+        map.setOnTouchListener { _, _ -> run { panning = true; false } }
         map.addMapListener(object : MapAdapter() {
             override fun onZoom(event: ZoomEvent?): Boolean {
                 if (event != null && pois.isNotEmpty())
@@ -111,6 +116,7 @@ class MapFragment : Fragment(), LocationListener {
                 return super.onZoom(event)
             }
         })
+
         createOverlays()
 
         // Gps Fab
@@ -139,6 +145,8 @@ class MapFragment : Fragment(), LocationListener {
         // Animations
         appear = AnimationUtils.loadAnimation(context, R.anim.appear)
         disappear = AnimationUtils.loadAnimation(context, R.anim.disappear)
+        rotateclock = AnimationUtils.loadAnimation(context, R.anim.rotate_clock)
+        rotateanticlock = AnimationUtils.loadAnimation(context, R.anim.rotate_anticlock)
 
         // Intents
         // Location can be shown calling the following:
@@ -156,8 +164,7 @@ class MapFragment : Fragment(), LocationListener {
 
     override fun onDestroy() {
         super.onDestroy()
-        lm.removeUpdates(this)
-        stepSensor.disable()
+        disableGps(false)
     }
 
     override fun onPause() {
@@ -175,14 +182,16 @@ class MapFragment : Fragment(), LocationListener {
 
         // Path
         path = Polyline(map, true)
-        path.outlinePaint.color = Color.RED
+        path.outlinePaint.color = Color.parseColor("#73B9FF")
         path.infoWindow = null
         map.overlays.add(path)
 
-        // Person
+        // Position
         marker = Marker(map)
-        marker.icon = AppCompatResources.getDrawable(this.requireContext(), R.drawable.person)
-        marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+        marker.setOnMarkerClickListener { _, _ -> panning = false; true }
+        marker.icon =
+            AppCompatResources.getDrawable(this.requireContext(), R.drawable.ic_baseline_position)
+        marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
         marker.alpha = 0f
         map.overlays.add(marker)
     }
@@ -192,7 +201,7 @@ class MapFragment : Fragment(), LocationListener {
             val poiProvider = NominatimPOIProvider(userAgent)
             try {
                 pois = poiProvider.getPOIInside(map.boundingBox, "Restaurant", 30)
-                Log.e("NewPois", pois.size.toString())
+                Log.d("Points of Interest", pois.size.toString())
 
                 CoroutineScope(Dispatchers.Main).launch {
                     refreshPointsOfInterest()
@@ -207,18 +216,17 @@ class MapFragment : Fragment(), LocationListener {
 
         CoroutineScope(Dispatchers.Unconfined).launch {
             val overlays: MutableList<Overlay> = mutableListOf()
-            map.overlays.removeAll { it != marker } // Remove old overlays if any exist
-
-            Log.e("PoisRefresh", pois.size.toString())
+            map.overlays.removeAll { it != marker && it != path } // Remove old overlays if any exist
 
             pois.forEach {
-                marker = Marker(map)
-                marker.icon = BitmapDrawable(resources, it.mThumbnail.scale(100, 100))
-                marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
-                marker.position = it.mLocation
-                marker.title = it.mDescription.takeWhile { it != ',' }
-                if (invisible) marker.alpha = 0f
-                overlays.add(marker)
+                val poimarker = Marker(map)
+                poimarker.icon = BitmapDrawable(resources, it.mThumbnail.scale(100, 100))
+                poimarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                poimarker.position = it.mLocation
+                poimarker.isFlat = true
+                poimarker.title = it.mDescription.takeWhile { it != ',' }
+                if (invisible) poimarker.alpha = 0f
+                overlays.add(poimarker)
             }
 
             CoroutineScope(Dispatchers.Main).launch {
@@ -232,27 +240,21 @@ class MapFragment : Fragment(), LocationListener {
     @SuppressLint("MissingPermission")
     private fun enableGps() {
         if (locationProvider(requireContext()) != null) {
-            stepSensor.enable()
             toggle.tag = true
-            toggle.backgroundTintList =
-                ColorStateList.valueOf(Color.RED + Color.RED * 40 / 100)
+            toggle.backgroundTintList = ColorStateList.valueOf(Color.RED + Color.RED * 40 / 100)
             lm.requestLocationUpdates(locationProvider(requireContext())!!, 1000, 15f, this)
-        } else {
-            Log.e("Location", "Insufficient permissions, location needed")
-            Toast.makeText(
-                this.context?.applicationContext,
-                "Insufficient permissions, location needed",
-                Toast.LENGTH_LONG
-            ).show()
-
+        } else
             requestLocationPermissions(requireActivity())
-        }
     }
 
     private fun disableGps(animation: Boolean = true) {
         toggle.tag = false
 
-        if (animation) info.startAnimation(disappear)
+        if (animation) {
+            info.startAnimation(disappear)
+            toggle.startAnimation(rotateanticlock)
+            toggle.setImageResource(R.drawable.ic_baseline_locationoff)
+        }
 
         // Stop recording
         toggle.backgroundTintList =
@@ -270,7 +272,16 @@ class MapFragment : Fragment(), LocationListener {
     }
 
 
-    override fun onProviderEnabled(provider: String) {}
+    override fun onProviderEnabled(provider: String) {
+        if(toggle.tag == false)
+            toggle.setImageResource(R.drawable.ic_baseline_locationoff)
+        else {
+            toggle.startAnimation(rotateclock)
+            toggle.setImageResource(R.drawable.ic_baseline_location)
+        }
+
+    }
+
     override fun onProviderDisabled(provider: String) {
         Toast.makeText(
             this.context,
@@ -278,20 +289,14 @@ class MapFragment : Fragment(), LocationListener {
             Toast.LENGTH_LONG
         ).show()
 
-        disableGps(false)
+        toggle.startAnimation(rotateanticlock)
+        toggle.setImageResource(R.drawable.ic_baseline_locationdisabled)
     }
 
     override fun onLocationChanged(p0: Location) {
         Log.d("GEOLOCATION", "new latitude: ${p0.latitude} and longitude: ${p0.longitude}")
 
-        if (path.actualPoints.isEmpty()) // First location
-        {
-            map.controller.setZoom(18.0)
-            info.startAnimation(appear)
-        }
-
         val point = GeoPoint(p0.latitude, p0.longitude)
-        map.controller.setCenter(point)
 
         // Marker
         marker.position = point
@@ -302,7 +307,23 @@ class MapFragment : Fragment(), LocationListener {
         CoroutineScope(Dispatchers.IO).launch {
             marker.subDescription = getAddress(context, point)
         }
-        marker.alpha = 1f
+
+
+        if (path.actualPoints.isEmpty()) // First location
+        {
+            info.startAnimation(appear)
+            marker.alpha = 1f
+
+
+            toggle.startAnimation(rotateclock)
+            toggle.setImageResource(R.drawable.ic_baseline_location)
+
+            map.controller.setZoom(18.0)
+            map.controller.setCenter(point)
+
+            // Data
+            stepSensor.enable()
+        } else if (!panning) map.controller.setCenter(point)
 
         // Path
         path.addPoint(point)
