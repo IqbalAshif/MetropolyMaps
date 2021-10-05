@@ -11,6 +11,7 @@ import android.location.LocationManager
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
+import android.view.Menu
 import android.view.View
 import android.view.ViewGroup
 import android.view.animation.Animation
@@ -38,6 +39,9 @@ import org.osmdroid.views.overlay.Polyline
 import java.lang.NullPointerException
 import kotlin.math.roundToInt
 import androidx.core.graphics.scale
+import com.google.android.material.bottomnavigation.BottomNavigationView
+import kotlinx.android.synthetic.*
+import kotlinx.android.synthetic.main.activity_main.*
 import org.osmdroid.bonuspack.routing.RoadManager
 import org.osmdroid.events.MapAdapter
 import org.osmdroid.events.ZoomEvent
@@ -133,16 +137,36 @@ class MapFragment : Fragment(), LocationListener {
         // Info Fab
         info = view.findViewById<FloatingActionButton>(R.id.info)
         info.setOnClickListener {
-            /*
+
             parentFragmentManager.beginTransaction().hide(this)
                 .add(R.id.fragmentContainerView, DashboardFragment.newInstance())
                 .addToBackStack("")
                 .commit()
-             */
-            fetchPointsOfInterest("Restaurant")
         }
 
-        //bottom tab navigator
+       /* bottomTabNavigator.setOnItemSelectedListener {
+            when(it.itemId){
+                R.id.btnRestaurant -> {
+                    fetchPointsOfInterest("Restaurant")
+                   true
+                }
+
+                R.id.btnSupermarket -> {
+                    fetchPointsOfInterest("Supermarket")
+                    true
+                }
+
+                R.id.btnBuss -> {
+                    fetchPointsOfInterest("Buss station")
+                    true
+                }
+
+                else -> true
+            }
+        }
+
+        */
+
         // Animations
         appear = AnimationUtils.loadAnimation(context, R.anim.appear)
         disappear = AnimationUtils.loadAnimation(context, R.anim.disappear)

@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
-        android:id="@+id/btnMap"
+        android:id="@+id/btnRestaurant"
         android:icon="@drawable/ic_baseline_map_24"
         android:title="@string/restaurant" />
     <item
-        android:id="@+id/btnRestaurant"
+        android:id="@+id/btnSupermarket"
         android:icon="@drawable/ic_baseline_restaurant_24"
         android:title="@string/supermarket" />
     <item
-        android:id="@+id/btnSupermarket"
+        android:id="@+id/btnBuss"
         android:icon="@drawable/ic_baseline_local_grocery_store_24"
         android:title="@string/buss" />
 </menu>
