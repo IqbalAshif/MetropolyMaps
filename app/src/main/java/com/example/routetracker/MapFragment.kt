@@ -144,29 +144,6 @@ class MapFragment : Fragment(), LocationListener {
                 .commit()
         }
 
-       /* bottomTabNavigator.setOnItemSelectedListener {
-            when(it.itemId){
-                R.id.btnRestaurant -> {
-                    fetchPointsOfInterest("Restaurant")
-                   true
-                }
-
-                R.id.btnSupermarket -> {
-                    fetchPointsOfInterest("Supermarket")
-                    true
-                }
-
-                R.id.btnBuss -> {
-                    fetchPointsOfInterest("Buss station")
-                    true
-                }
-
-                else -> true
-            }
-        }
-
-        */
-
         // Animations
         appear = AnimationUtils.loadAnimation(context, R.anim.appear)
         disappear = AnimationUtils.loadAnimation(context, R.anim.disappear)
