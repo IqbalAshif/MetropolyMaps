@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <FrameLayout
+        android:id="@+id/standardBottomSheet"
+        android:layout_width="match_parent"
+        android:layout_height="70dp"
+        style="?attr/bottomSheetStyle"
+        app:layout_behavior="@string/bottom_sheet_behavior">
+
+        <!-- Bottom Sheet contents -->
+        <Button
+            android:id="@+id/btRoute"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Route" />
+
+    </FrameLayout>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

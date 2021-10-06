@@ -3,4 +3,6 @@
     <string name="record_location">record location</string>
     <string name="info">info</string>
     <string name="dashboard">Dashboard</string>
+    <string name="title">Title</string>
+    <string name="show_route">Show Route</string>
 </resources>
