@@ -225,7 +225,6 @@ class MapFragment : Fragment(), LocationListener {
         CoroutineScope(Dispatchers.Unconfined).launch {
             val overlays: MutableList<Overlay> = mutableListOf()
             map.overlays.removeAll { it != marker && it != path } // Remove old overlays if any exist
-
             pois.forEach {
                 val poimarker = Marker(map)
                 poimarker.icon = BitmapDrawable(resources, it.mThumbnail.scale(100, 100))
