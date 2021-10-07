@@ -11,7 +11,6 @@ import android.location.LocationManager
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
-import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.animation.Animation
@@ -20,7 +19,6 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.graphics.scale
-import androidx.core.widget.NestedScrollView
 import androidx.fragment.app.Fragment
 import androidx.preference.PreferenceManager
 import com.example.routetracker.helpers.*
@@ -37,11 +35,9 @@ import org.osmdroid.events.ZoomEvent
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
-import org.osmdroid.views.Projection
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Overlay
 import org.osmdroid.views.overlay.Polyline
-import kotlin.math.log
 import kotlin.math.roundToInt
 
 
@@ -138,14 +134,11 @@ class MapFragment : Fragment(), LocationListener {
         info = view.findViewById<FloatingActionButton>(R.id.info)
         info.setOnClickListener {
 
-            /*
+
             parentFragmentManager.beginTransaction().hide(this)
-                .add(R.id.fragmentContainerView, DashboardFragment.newInstance())
+                .add(R.id.fragmentContainerView, DashboardFragment.newInstance(this))
                 .addToBackStack("")
                 .commit()
-             */
-
-            fetchPointsOfInterest()
 
         }
 
@@ -207,11 +200,11 @@ class MapFragment : Fragment(), LocationListener {
         map.overlays.add(marker)
     }
 
-    private fun fetchPointsOfInterest() {
+    fun fetchPointsOfInterest(request: String) {
         CoroutineScope(Dispatchers.IO).launch {
             val poiProvider = NominatimPOIProvider(userAgent)
             try {
-                pois = poiProvider.getPOIInside(map.boundingBox, "Restaurant", 30)
+                pois = poiProvider.getPOIInside(map.boundingBox, request, 30)
                 Log.d("Points of Interest", pois.size.toString())
                 CoroutineScope(Dispatchers.Main).launch {
                     refreshPointsOfInterest()
@@ -246,6 +239,8 @@ class MapFragment : Fragment(), LocationListener {
                 map.overlays.addAll(overlays)
                 map.invalidate()
             }
+
+            parentFragmentManager.popBackStack()
         }
     }
 
