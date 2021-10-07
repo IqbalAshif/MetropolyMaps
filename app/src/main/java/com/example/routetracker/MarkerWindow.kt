@@ -20,27 +20,20 @@ import kotlin.coroutines.coroutineContext
 
 class MarkerWindow(mapView: MapView) :
     InfoWindow(R.layout.info_window, mapView) {
-    // var roadManager: RoadManager = OSRMRoadManager(this., MY_USER_AGENT)
-   // private var pois: MutableList<POI> = mutableListOf()
     override fun onOpen(item: Any?) {
         closeAllInfoWindowsOn(mapView)
-        // val path = Polyline(mapView, true)
+
         val routeButton = mView.findViewById<Button>(R.id.btRoute)
-     /*   val userAgent = BuildConfig.APPLICATION_ID + "/" + BuildConfig.VERSION_NAME
-        val poiProvider = NominatimPOIProvider(userAgent)
-        pois = poiProvider.getPOIInside(mapView.boundingBox, "Restaurant", 30)
-
-      */
-        val titleText = mView.findViewById<TextView>(R.id.tvTitle)
-
         routeButton.setOnClickListener {
-
-
-            //  mapView.addMapListener(MoveMarkerMapListener)
+        //TODO route suggestion
         }
         mView.setOnClickListener {
             close()
         }
+    }
+
+    fun seTitle(title: String){
+        view.findViewById<TextView>(R.id.tvTitle).text = title
     }
 
     override fun onClose() {

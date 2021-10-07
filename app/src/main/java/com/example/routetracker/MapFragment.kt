@@ -143,8 +143,6 @@ class MapFragment : Fragment(), LocationListener {
                 .add(R.id.fragmentContainerView, DashboardFragment.newInstance(this))
                 .addToBackStack("")
                 .commit()
-             
-            fetchPointsOfInterest()
 
         }
 
@@ -222,17 +220,17 @@ class MapFragment : Fragment(), LocationListener {
     }
 
     private fun refreshPointsOfInterest(invisible: Boolean = false) {
-        val infoWindow = MarkerWindow(map)
         CoroutineScope(Dispatchers.Unconfined).launch {
             val overlays: MutableList<Overlay> = mutableListOf()
             map.overlays.removeAll { it != marker && it != path } // Remove old overlays if any exist
             pois.forEach {
+                val infoWindow = MarkerWindow(map)
                 val poimarker = Marker(map)
                 poimarker.icon = BitmapDrawable(resources, it.mThumbnail.scale(100, 100))
                 poimarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
                 poimarker.position = it.mLocation
                 poimarker.isFlat = true
-                poimarker.title = it.mDescription.takeWhile { it != ',' }
+                infoWindow.seTitle(it.mDescription.takeWhile { it != ',' })
                 poimarker.infoWindow = infoWindow
                 poimarker.relatedObject = it
                 poimarker.closeInfoWindow()
