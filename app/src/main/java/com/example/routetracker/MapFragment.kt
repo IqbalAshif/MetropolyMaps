@@ -137,12 +137,14 @@ class MapFragment : Fragment(), LocationListener {
         // Info Fab
         info = view.findViewById<FloatingActionButton>(R.id.info)
         info.setOnClickListener {
+
             /*
             parentFragmentManager.beginTransaction().hide(this)
                 .add(R.id.fragmentContainerView, DashboardFragment.newInstance())
                 .addToBackStack("")
                 .commit()
              */
+
             fetchPointsOfInterest()
 
         }
@@ -172,7 +174,7 @@ class MapFragment : Fragment(), LocationListener {
 
     override fun onDestroy() {
         super.onDestroy()
-        disableGps(false)
+        lm.removeUpdates(this)
     }
 
     override fun onPause() {
