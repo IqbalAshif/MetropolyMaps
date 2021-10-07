@@ -9,4 +9,11 @@
     <string name="route">Route</string>
     <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
+
+    <string name="restaurant">Restaurant</string>
+    <string name="market">Market</string>
+    <string name="bar">Bar</string>
+    <string name="public_transport">Public Transport</string>
+    <string name="car_repair">Car Repair</string>
+    <string name="attraction">Attraction</string>
 </resources>

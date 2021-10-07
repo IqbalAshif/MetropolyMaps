@@ -137,12 +137,13 @@ class MapFragment : Fragment(), LocationListener {
         // Info Fab
         info = view.findViewById<FloatingActionButton>(R.id.info)
         info.setOnClickListener {
-            /*
+
+
             parentFragmentManager.beginTransaction().hide(this)
-                .add(R.id.fragmentContainerView, DashboardFragment.newInstance())
+                .add(R.id.fragmentContainerView, DashboardFragment.newInstance(this))
                 .addToBackStack("")
                 .commit()
-             */
+             
             fetchPointsOfInterest()
 
         }
@@ -172,7 +173,7 @@ class MapFragment : Fragment(), LocationListener {
 
     override fun onDestroy() {
         super.onDestroy()
-        disableGps(false)
+        lm.removeUpdates(this)
     }
 
     override fun onPause() {
@@ -205,11 +206,11 @@ class MapFragment : Fragment(), LocationListener {
         map.overlays.add(marker)
     }
 
-    private fun fetchPointsOfInterest() {
+    fun fetchPointsOfInterest(request: String) {
         CoroutineScope(Dispatchers.IO).launch {
             val poiProvider = NominatimPOIProvider(userAgent)
             try {
-                pois = poiProvider.getPOIInside(map.boundingBox, "Restaurant", 30)
+                pois = poiProvider.getPOIInside(map.boundingBox, request, 30)
                 Log.d("Points of Interest", pois.size.toString())
                 CoroutineScope(Dispatchers.Main).launch {
                     refreshPointsOfInterest()
@@ -244,6 +245,8 @@ class MapFragment : Fragment(), LocationListener {
                 map.overlays.addAll(overlays)
                 map.invalidate()
             }
+
+            parentFragmentManager.popBackStack()
         }
     }
 
