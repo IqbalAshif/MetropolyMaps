@@ -62,5 +62,4 @@
         app:layout_constraintEnd_toEndOf="@id/toggle"
         app:layout_constraintStart_toStartOf="@+id/toggle"
         app:srcCompat="@android:drawable/ic_menu_info_details" />
-
 </androidx.constraintlayout.widget.ConstraintLayout>

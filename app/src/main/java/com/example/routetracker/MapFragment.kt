@@ -11,6 +11,7 @@ import android.location.LocationManager
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.animation.Animation
@@ -19,6 +20,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.graphics.scale
+import androidx.core.widget.NestedScrollView
 import androidx.fragment.app.Fragment
 import androidx.preference.PreferenceManager
 import com.example.routetracker.helpers.*
@@ -35,9 +37,11 @@ import org.osmdroid.events.ZoomEvent
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
+import org.osmdroid.views.Projection
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Overlay
 import org.osmdroid.views.overlay.Polyline
+import kotlin.math.log
 import kotlin.math.roundToInt
 
 
@@ -63,6 +67,7 @@ class MapFragment : Fragment(), LocationListener {
     private lateinit var rotateclock: Animation
     private lateinit var rotateanticlock: Animation
 
+
     private var panning = false
 
     companion object {
@@ -81,7 +86,6 @@ class MapFragment : Fragment(), LocationListener {
     ): View? {
         val view = inflater.inflate(R.layout.fragment_map, container, false)
         super.onCreate(savedInstanceState)
-
         Configuration.getInstance()
             .load(context, PreferenceManager.getDefaultSharedPreferences(context))
 
@@ -140,6 +144,7 @@ class MapFragment : Fragment(), LocationListener {
                 .commit()
              */
             fetchPointsOfInterest()
+
         }
 
         // Animations
@@ -159,6 +164,9 @@ class MapFragment : Fragment(), LocationListener {
             map.controller.setZoom(18.0)
         }
 
+
+
+
         return view
     }
 
@@ -176,6 +184,7 @@ class MapFragment : Fragment(), LocationListener {
         super.onResume()
         stepSensor.enable()
     }
+
 
     /* MAP */
     private fun createOverlays() {
@@ -202,7 +211,6 @@ class MapFragment : Fragment(), LocationListener {
             try {
                 pois = poiProvider.getPOIInside(map.boundingBox, "Restaurant", 30)
                 Log.d("Points of Interest", pois.size.toString())
-
                 CoroutineScope(Dispatchers.Main).launch {
                     refreshPointsOfInterest()
                 }
@@ -213,11 +221,10 @@ class MapFragment : Fragment(), LocationListener {
     }
 
     private fun refreshPointsOfInterest(invisible: Boolean = false) {
-
+        val infoWindow = MarkerWindow(map)
         CoroutineScope(Dispatchers.Unconfined).launch {
             val overlays: MutableList<Overlay> = mutableListOf()
             map.overlays.removeAll { it != marker && it != path } // Remove old overlays if any exist
-
             pois.forEach {
                 val poimarker = Marker(map)
                 poimarker.icon = BitmapDrawable(resources, it.mThumbnail.scale(100, 100))
@@ -225,8 +232,12 @@ class MapFragment : Fragment(), LocationListener {
                 poimarker.position = it.mLocation
                 poimarker.isFlat = true
                 poimarker.title = it.mDescription.takeWhile { it != ',' }
+                poimarker.infoWindow = infoWindow
+                poimarker.relatedObject = it
+                poimarker.closeInfoWindow()
                 if (invisible) poimarker.alpha = 0f
                 overlays.add(poimarker)
+               // poimarker.setOnMarkerClickListener { _, _ -> panning = false; true }
             }
 
             CoroutineScope(Dispatchers.Main).launch {
