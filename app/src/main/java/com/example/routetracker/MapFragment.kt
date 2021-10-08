@@ -16,19 +16,16 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.animation.Animation
 import android.view.animation.AnimationUtils
-import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.graphics.scale
 import androidx.fragment.app.Fragment
 import androidx.preference.PreferenceManager
 import com.example.routetracker.helpers.*
-import com.example.routetracker.sensors.StepSensor
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import org.osmdroid.bonuspack.location.NominatimPOIProvider
 import org.osmdroid.bonuspack.location.POI
 import org.osmdroid.config.Configuration
 import org.osmdroid.events.MapAdapter
@@ -39,28 +36,21 @@ import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Overlay
 import org.osmdroid.views.overlay.Polyline
-import kotlin.math.roundToInt
 
 
 class MapFragment : Fragment(), LocationListener {
 
     private lateinit var lm: LocationManager
-    private lateinit var stepSensor: StepSensor
-
-    private lateinit var stepCount: TextView
 
     lateinit var map: MapView
     private lateinit var marker: Marker
     private lateinit var path: Polyline
 
-    private var pois: MutableList<POI> = mutableListOf()
+    var pois: MutableList<POI> = mutableListOf()
     private var poisHidden : Boolean = true
 
     private lateinit var toggle: FloatingActionButton
     private lateinit var info: FloatingActionButton
-
-    // Info page
-    private val dashboard : DashboardFragment = DashboardFragment.newInstance(this)
 
     // Animations
     private lateinit var appear: Animation
@@ -69,13 +59,11 @@ class MapFragment : Fragment(), LocationListener {
     private lateinit var rotateanticlock: Animation
 
 
-    private var panning = false
+    var panning = false
 
     companion object {
         fun newInstance() = MapFragment()
     }
-
-    val userAgent = BuildConfig.APPLICATION_ID + "/" + BuildConfig.VERSION_NAME
 
 
     /* UI */
@@ -89,18 +77,6 @@ class MapFragment : Fragment(), LocationListener {
         super.onCreate(savedInstanceState)
         Configuration.getInstance()
             .load(context, PreferenceManager.getDefaultSharedPreferences(context))
-
-        // Stepcounter
-        stepCount = view.findViewById<TextView>(R.id.steps)
-        stepSensor = StepSensor(context)
-        stepSensor.onStopped = { stepCount.text = "" }
-        stepSensor.onTriggered = {
-            if (stepCount.tag != null && toggle.tag == true)
-                stepCount.text = (stepCount.text.toString().ifEmpty { "0" }.ifBlank { "0" }
-                    .toFloat() + it.values[0] - (stepCount.tag as Float)).roundToInt().toString()
-
-            stepCount.tag = it.values[0]
-        }
 
 
         // Map
@@ -118,11 +94,11 @@ class MapFragment : Fragment(), LocationListener {
         } }
         map.addMapListener(object : MapAdapter() {
             override fun onZoom(event: ZoomEvent?): Boolean {
+                Log.e("Zoom",event?.zoomLevel.toString())
                 if (event != null && pois.isNotEmpty())
-                    if (event.zoomLevel >= 18)
-                        refreshPointsOfInterest(true) // Use tile icons when they appear
-                    else
-                        refreshPointsOfInterest(false)
+                    if (event.zoomLevel >= 17.5)
+                        hidePointsOfInterest()
+                    else showPointsOfInterest()
                 return super.onZoom(event)
             }
         })
@@ -146,7 +122,7 @@ class MapFragment : Fragment(), LocationListener {
         info = view.findViewById<FloatingActionButton>(R.id.info)
         info.setOnClickListener {
             parentFragmentManager.beginTransaction().hide(this)
-                .add(R.id.fragmentContainerView, dashboard)
+                .add(R.id.fragmentContainerView, DashboardFragment.newInstance(this))
                 .addToBackStack("")
                 .commit()
 
@@ -180,16 +156,6 @@ class MapFragment : Fragment(), LocationListener {
         lm.removeUpdates(this)
     }
 
-    override fun onPause() {
-        super.onPause()
-        stepSensor.disable()
-    }
-
-    override fun onResume() {
-        super.onResume()
-        stepSensor.enable()
-    }
-
 
     /* MAP */
     private fun createOverlays() {
@@ -210,30 +176,34 @@ class MapFragment : Fragment(), LocationListener {
         map.overlays.add(marker)
     }
 
-    fun fetchPointsOfInterest(request: String) {
-        CoroutineScope(Dispatchers.IO).launch {
-            val poiProvider = NominatimPOIProvider(userAgent)
-            try {
-                pois = poiProvider.getPOIInside(map.boundingBox, request, 30)
-                Log.d("Points of Interest", pois.size.toString())
-                CoroutineScope(Dispatchers.Main).launch {
-                    refreshPointsOfInterest()
-                }
-            } catch (exp: NullPointerException) { // Network Error
-                Log.e("Network Error", "Failed to fetch points of interest")
+    fun hidePointsOfInterest()
+    {
+        map.overlays.forEach {
+            if(it != path && it != marker) {
+                it as Marker
+                it.alpha = 0f
             }
         }
     }
 
-    private fun refreshPointsOfInterest(invisible: Boolean = false) {
-        if(pois.isEmpty() || poisHidden == invisible) return
-        poisHidden = invisible
+    fun showPointsOfInterest()
+    {
+        map.overlays.forEach {
+            if(it != path && it != marker) {
+                it as Marker
+                it.alpha = 1f
+            }
+        }
+    }
+
+
+    fun createPointsOfInterest() {
         CoroutineScope(Dispatchers.Unconfined).launch {
             val overlays: MutableList<Overlay> = mutableListOf()
             map.overlays.removeAll { it != marker && it != path } // Remove old overlays if any exist
             pois.forEach {
                 val poimarker = Marker(map)
-                poimarker.icon = BitmapDrawable(resources, it.mThumbnail.scale(100, 100))
+                if(it.thumbnail != null) poimarker.icon = BitmapDrawable(resources, it.mThumbnail.scale(100, 100))
                 poimarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
                 poimarker.position = it.mLocation
                 poimarker.isFlat = true
@@ -243,7 +213,6 @@ class MapFragment : Fragment(), LocationListener {
                 poimarker.infoWindow = infoWindow
                 poimarker.closeInfoWindow()
 
-                if (invisible) poimarker.alpha = 0f
                 overlays.add(poimarker)
             }
 
@@ -251,8 +220,6 @@ class MapFragment : Fragment(), LocationListener {
                 map.overlays.addAll(overlays)
                 map.invalidate()
             }
-
-            parentFragmentManager.popBackStack()
         }
     }
 
@@ -287,8 +254,6 @@ class MapFragment : Fragment(), LocationListener {
         marker.closeInfoWindow()
         map.invalidate()
 
-        // Stop stepcounter
-        stepSensor.disable()
     }
 
 
@@ -340,9 +305,6 @@ class MapFragment : Fragment(), LocationListener {
 
             map.controller.setZoom(18.0)
             map.controller.setCenter(point)
-
-            // Data
-            stepSensor.enable()
         } else if (!panning) map.controller.setCenter(point)
 
         // Path
