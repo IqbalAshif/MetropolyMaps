@@ -258,7 +258,7 @@ class MapFragment : Fragment(), LocationListener {
     private fun disableGps(animation: Boolean = true) {
         toggle.tag = false
 
-        if (animation) {
+        if (animation && path.actualPoints.isNotEmpty()) {
             info.startAnimation(disappear)
             toggle.startAnimation(rotateanticlock)
             toggle.setImageResource(R.drawable.ic_baseline_locationoff)
