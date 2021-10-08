@@ -11,6 +11,7 @@ import android.location.LocationManager
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.animation.Animation
@@ -56,6 +57,9 @@ class MapFragment : Fragment(), LocationListener {
 
     private lateinit var toggle: FloatingActionButton
     private lateinit var info: FloatingActionButton
+
+    // Info page
+    private val dashboard : DashboardFragment = DashboardFragment.newInstance(this)
 
     // Animations
     private lateinit var appear: Animation
@@ -105,7 +109,7 @@ class MapFragment : Fragment(), LocationListener {
         map.isTilesScaledToDpi = true
         map.setMultiTouchControls(true)
         map.controller.setZoom(3.0)
-        map.setOnTouchListener { _, _ -> run { panning = true; false } }
+        map.setOnTouchListener { v, e -> run { if(e.action == MotionEvent.ACTION_MOVE) panning = true; false } }
         map.addMapListener(object : MapAdapter() {
             override fun onZoom(event: ZoomEvent?): Boolean {
                 if (event != null && pois.isNotEmpty())
@@ -133,10 +137,8 @@ class MapFragment : Fragment(), LocationListener {
         // Info Fab
         info = view.findViewById<FloatingActionButton>(R.id.info)
         info.setOnClickListener {
-
-
             parentFragmentManager.beginTransaction().hide(this)
-                .add(R.id.fragmentContainerView, DashboardFragment.newInstance(this))
+                .add(R.id.fragmentContainerView, dashboard)
                 .addToBackStack("")
                 .commit()
 
@@ -216,23 +218,24 @@ class MapFragment : Fragment(), LocationListener {
     }
 
     private fun refreshPointsOfInterest(invisible: Boolean = false) {
+        if(pois.isEmpty()) return
         CoroutineScope(Dispatchers.Unconfined).launch {
             val overlays: MutableList<Overlay> = mutableListOf()
             map.overlays.removeAll { it != marker && it != path } // Remove old overlays if any exist
             pois.forEach {
-                val infoWindow = MarkerWindow(map)
                 val poimarker = Marker(map)
                 poimarker.icon = BitmapDrawable(resources, it.mThumbnail.scale(100, 100))
                 poimarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
                 poimarker.position = it.mLocation
                 poimarker.isFlat = true
+
+                val infoWindow = MarkerWindow(map)
                 infoWindow.seTitle(it.mDescription.takeWhile { it != ',' })
                 poimarker.infoWindow = infoWindow
-                poimarker.relatedObject = it
                 poimarker.closeInfoWindow()
+
                 if (invisible) poimarker.alpha = 0f
                 overlays.add(poimarker)
-               // poimarker.setOnMarkerClickListener { _, _ -> panning = false; true }
             }
 
             CoroutineScope(Dispatchers.Main).launch {
