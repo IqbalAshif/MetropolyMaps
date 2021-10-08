@@ -54,6 +54,7 @@ class MapFragment : Fragment(), LocationListener {
     private lateinit var path: Polyline
 
     private var pois: MutableList<POI> = mutableListOf()
+    private var poisHidden : Boolean = true
 
     private lateinit var toggle: FloatingActionButton
     private lateinit var info: FloatingActionButton
@@ -109,7 +110,12 @@ class MapFragment : Fragment(), LocationListener {
         map.isTilesScaledToDpi = true
         map.setMultiTouchControls(true)
         map.controller.setZoom(3.0)
-        map.setOnTouchListener { v, e -> run { if(e.action == MotionEvent.ACTION_MOVE) panning = true; false } }
+        map.setOnTouchListener { v, e -> run {
+            if(e.action == MotionEvent.ACTION_DOWN) v.tag = true // If drag possibly started
+            else if(e.action == MotionEvent.ACTION_MOVE && v.tag == true) panning = true // Is drag not click
+            else v.tag = false // It was not a drag
+            false
+        } }
         map.addMapListener(object : MapAdapter() {
             override fun onZoom(event: ZoomEvent?): Boolean {
                 if (event != null && pois.isNotEmpty())
@@ -120,6 +126,8 @@ class MapFragment : Fragment(), LocationListener {
                 return super.onZoom(event)
             }
         })
+
+
 
         createOverlays()
 
@@ -218,7 +226,8 @@ class MapFragment : Fragment(), LocationListener {
     }
 
     private fun refreshPointsOfInterest(invisible: Boolean = false) {
-        if(pois.isEmpty()) return
+        if(pois.isEmpty() || poisHidden == invisible) return
+        poisHidden = invisible
         CoroutineScope(Dispatchers.Unconfined).launch {
             val overlays: MutableList<Overlay> = mutableListOf()
             map.overlays.removeAll { it != marker && it != path } // Remove old overlays if any exist
