@@ -1,18 +1,31 @@
 package com.example.routetracker
 
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.LinearLayout
+import android.widget.TextView
 import androidx.fragment.app.Fragment
+import com.example.routetracker.helpers.fetchPointsOfInterest
+import com.example.routetracker.sensors.StepSensor
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import org.osmdroid.util.BoundingBox
 
 
-class DashboardFragment(val mapfragment : MapFragment? = null) : Fragment() {
+class DashboardFragment(private var mapFragment: MapFragment) : Fragment() {
 
     companion object {
-        fun newInstance(mapfragment : MapFragment) = DashboardFragment(mapfragment)
+        fun newInstance(mapFragment: MapFragment) = DashboardFragment(mapFragment)
     }
+
+    var stepSensor: StepSensor = StepSensor(mapFragment.requireContext())
+    private var stepStartCount: Float = 0f
+    private var stepEndCount: Float = 0f
 
     /* UI */
     override fun onCreateView(
@@ -21,22 +34,100 @@ class DashboardFragment(val mapfragment : MapFragment? = null) : Fragment() {
         savedInstanceState: Bundle?
     ): View? {
         val view = inflater.inflate(R.layout.fragment_dashboard, container, false)
+        Log.e("Construct", "Now")
 
-        val card1 = view.findViewById<Button>(R.id.cardView1)
-        card1.setOnClickListener { onClick(card1) }
-        val card2 = view.findViewById<Button>(R.id.cardView2)
-        card2.setOnClickListener { onClick(card2) }
-        val card3 = view.findViewById<Button>(R.id.cardView3)
-        card3.setOnClickListener { onClick(card3) }
-        val card4 = view.findViewById<Button>(R.id.cardView4)
-        card4.setOnClickListener { onClick(card4) }
-        val card5 = view.findViewById<Button>(R.id.cardView5)
-        card5.setOnClickListener { onClick(card5) }
-        val card6 = view.findViewById<Button>(R.id.cardView6)
-        card6.setOnClickListener { onClick(card6) }
+        view.findViewById<Button>(R.id.cardView1).also { it.setOnClickListener { onClick(it) } }
+        view.findViewById<Button>(R.id.cardView2).also { it.setOnClickListener { onClick(it) } }
+        view.findViewById<Button>(R.id.cardView3).also { it.setOnClickListener { onClick(it) } }
+        view.findViewById<Button>(R.id.cardView4).also { it.setOnClickListener { onClick(it) } }
+        view.findViewById<Button>(R.id.cardView5).also { it.setOnClickListener { onClick(it) } }
+        view.findViewById<Button>(R.id.cardView6).also { it.setOnClickListener { onClick(it) } }
+
+        // Stepcounter
+        stepSensor.enable()
+        stepSensor.onTriggered = {
+            if (stepStartCount == 0f)
+                stepStartCount = it.values[0]
+            else if (stepStartCount != it.values[0])
+                stepEndCount = it.values[0]
+        }
+
+        // Smart Content
+
+        val notificationlist = view.findViewById<LinearLayout>(R.id.notificationlist)
+
+        fetchPointsOfInterest("Attractions", mapFragment.map.boundingBox) { pois ->
+            val cards = mutableListOf<View>()
+            pois.forEach { poi ->
+                cards.add(createSmartCard(
+                    "Nearby",
+                    poi.mDescription.takeWhile { character -> character != ',' }).also {
+                    it.setOnClickListener {
+                        parentFragmentManager.popBackStack()
+                        mapFragment.panning = true
+
+                        mapFragment.map.zoomToBoundingBox(
+                            BoundingBox.fromGeoPoints(
+                                mutableListOf(poi.mLocation)
+                            ).increaseByScale(0.00001f), true
+                        )
+
+                        mapFragment.pois.add(poi)
+                        mapFragment.createPointsOfInterest()
+                    }
+                })
+            }
+
+            CoroutineScope(Dispatchers.Main).launch {
+                cards.forEach { notificationlist.addView(it) }
+            }
+
+        }
+
+        if (stepEndCount != 0f) {
+            notificationlist.addView(
+                createSmartCard(
+                    "Steps",
+                    (stepEndCount - stepStartCount).toString()
+                )
+            )
+        }
 
         return view
     }
 
-    private fun onClick(view : View): Unit? = mapfragment?.fetchPointsOfInterest(view.tag as String)
+    override fun onDestroyView() {
+        super.onDestroyView()
+        stepSensor.disable()
+    }
+
+    private fun createSmartCard(title: String, subtitle: String): View {
+        val v = LayoutInflater.from(context).inflate(R.layout.view_widecard,null ).also {
+            if (it.tag != null) it.setOnClickListener { onClick(it) }
+        }
+        val titleTextView = v.findViewById<TextView>(R.id.widecardtitle)
+        val subtitleTextView = v.findViewById<TextView>(R.id.widecardsubtitle)
+
+        titleTextView.text = title
+        subtitleTextView.text = subtitle
+        return v
+    }
+
+    override fun onPause() {
+        super.onPause()
+        stepSensor.disable()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        stepSensor.enable()
+    }
+
+    private fun onClick(view: View): Unit = fetchPointsOfInterest(view.tag as String, mapFragment.map.boundingBox) {
+        CoroutineScope(Dispatchers.Main).launch {
+            parentFragmentManager.popBackStack()
+        }
+        mapFragment.pois = it.toMutableList()
+        mapFragment.createPointsOfInterest()
+    }
 }
