@@ -23,10 +23,16 @@ import androidx.fragment.app.Fragment
 import androidx.preference.PreferenceManager
 import com.example.routetracker.helpers.*
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import io.reactivex.Observable
+import io.reactivex.android.schedulers.AndroidSchedulers
+import io.reactivex.schedulers.Schedulers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.osmdroid.bonuspack.location.POI
+import org.osmdroid.bonuspack.routing.OSRMRoadManager
+import org.osmdroid.bonuspack.routing.Road
+import org.osmdroid.bonuspack.routing.RoadManager
 import org.osmdroid.config.Configuration
 import org.osmdroid.events.MapAdapter
 import org.osmdroid.events.ZoomEvent
@@ -36,6 +42,7 @@ import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Overlay
 import org.osmdroid.views.overlay.Polyline
+import kotlin.collections.ArrayList
 
 
 class MapFragment : Fragment(), LocationListener {
@@ -102,8 +109,12 @@ class MapFragment : Fragment(), LocationListener {
                 return super.onZoom(event)
             }
         })
+        val startPoint = GeoPoint(60.22335, 24.81799)
 
+      //  val mw = MarkerWindow(map)
 
+        addMarker(startPoint, "Start")
+        addingRouteLocations( startPoint)
 
         createOverlays()
 
@@ -144,9 +155,6 @@ class MapFragment : Fragment(), LocationListener {
             map.controller.setCenter(parseLocation(requireActivity().intent.data.toString()))
             map.controller.setZoom(18.0)
         }
-
-
-
 
         return view
     }
@@ -256,7 +264,6 @@ class MapFragment : Fragment(), LocationListener {
 
     }
 
-
     override fun onProviderEnabled(provider: String) {
         if(toggle.tag == false)
             toggle.setImageResource(R.drawable.ic_baseline_locationoff)
@@ -313,4 +320,60 @@ class MapFragment : Fragment(), LocationListener {
         map.invalidate()
     }
 
+     private fun addMarker( point: GeoPoint, title: String) {
+        val startMarker = Marker(map)
+        startMarker.position = point
+        startMarker.title = title
+        startMarker.icon = AppCompatResources.getDrawable(this.requireContext(), R.drawable.ic_baseline_position)
+        startMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+        map.overlays?.add(startMarker)
+        map.invalidate()
+    }
+
+     private fun addingRouteLocations(startPoint: GeoPoint) {
+        val roadManager = OSRMRoadManager(context, "MY_USER_AGENT")
+
+        val routePoints = ArrayList<GeoPoint>()
+        routePoints.add(startPoint)
+        routePoints.add(GeoPoint(60.22335, 24.81799))
+        val endPoint = GeoPoint(60.22286, 24.75908)
+        routePoints.add(endPoint)
+
+
+         Observable.fromCallable{
+             gettingRoad(roadManager, routePoints)
+        }
+            .subscribeOn(Schedulers.io())
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribe({
+
+            }, {
+
+            }, {
+                map.invalidate()
+            })
+
+        addMarker( endPoint, "Destination")
+    }
+
+
+     private fun gettingRoad(roadManager: OSRMRoadManager, waypoints: ArrayList<GeoPoint>) {
+        // Retrieving road
+
+        val road = roadManager.getRoad(waypoints)
+        val roadOverlay = RoadManager.buildRoadOverlay(road)
+        map.overlays.add(roadOverlay)
+    //Marker at each node
+        val nodeIcon = AppCompatResources.getDrawable(this.requireContext(), R.drawable.ic_round_stop_24)
+        for (i in 0 until road.mNodes.size) {
+            val node = road.mNodes[i]
+            val nodeMarker = Marker(map)
+            nodeMarker.position = node.mLocation
+            nodeMarker.icon = nodeIcon
+            nodeMarker.title = "Step $i"
+            map.overlays.add(nodeMarker)
+            nodeMarker.snippet = node.mInstructions
+            nodeMarker.subDescription = Road.getLengthDurationText(map.context, node.mLength, node.mDuration)
+        }
+    }
 }
