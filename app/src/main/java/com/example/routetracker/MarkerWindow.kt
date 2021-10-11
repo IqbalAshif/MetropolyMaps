@@ -2,13 +2,21 @@ package com.example.routetracker
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.text.Layout
+import android.util.Log
 import android.widget.Button
 import android.widget.TextView
 import androidx.appcompat.content.res.AppCompatResources
+import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContentProviderCompat.requireContext
+import androidx.fragment.app.Fragment
+import com.example.routetracker.helpers.locationProvider
 import io.reactivex.Observable
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.schedulers.Schedulers
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import org.osmdroid.bonuspack.routing.OSRMRoadManager
 import org.osmdroid.bonuspack.routing.Road
 import org.osmdroid.bonuspack.routing.RoadManager
@@ -20,9 +28,8 @@ import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 import kotlin.coroutines.coroutineContext
 
-class MarkerWindow(val context: Context, mapView: MapView) :
+class MarkerWindow(val context: Context, mapView: MapView, val mapFragment: MapFragment) :
     InfoWindow(R.layout.info_window, mapView) {
-
     lateinit var onRoute: () -> Unit
 
     override fun onOpen(item: Any?) {
@@ -30,8 +37,6 @@ class MarkerWindow(val context: Context, mapView: MapView) :
         val routeButton = view.findViewById<Button>(R.id.btRoute)
         //clicking route button
         routeButton.setOnClickListener {
-
-
             onRoute()
 
         }
@@ -40,7 +45,6 @@ class MarkerWindow(val context: Context, mapView: MapView) :
             close()
         }
     }
-
 
 //setting the title of the place to the textview
     fun seTitle(title: String){
@@ -58,39 +62,28 @@ class MarkerWindow(val context: Context, mapView: MapView) :
         mapView.invalidate()
     }
 
-    @SuppressLint("CheckResult")
      fun addingRouteLocations(startPoint: GeoPoint, endPoint: GeoPoint) {
         val roadManager = OSRMRoadManager(context, "MY_USER_AGENT")
 
         val routePoints = ArrayList<GeoPoint>()
         routePoints.add(startPoint)
-       // routePoints.add(GeoPoint(60.22335, 24.81799))
-       // val endPoint = GeoPoint(60.22286, 24.75908)
         routePoints.add(endPoint)
-
-
-        Observable.fromCallable{
-            gettingRoad(roadManager, routePoints)
-        }
-            .subscribeOn(Schedulers.io())
-            .observeOn(AndroidSchedulers.mainThread())
-            .subscribe({
-
-            }, {
-
-            }, {
-                mapView.invalidate()
-            })
-
+         CoroutineScope(Dispatchers.IO).launch {
+             gettingRoad(roadManager, routePoints)
+             mapView.invalidate()
+         }
         addMarker( endPoint, "Destination")
     }
 
-
     private fun gettingRoad(roadManager: OSRMRoadManager, waypoints: ArrayList<GeoPoint>) {
         // Retrieving road
-
+        roadManager.setMean(OSRMRoadManager.MEAN_BY_FOOT)
         val road = roadManager.getRoad(waypoints)
-        val roadOverlay = RoadManager.buildRoadOverlay(road)
+        if(mapFragment.route != null){
+            mapView.overlays.remove(mapFragment.route)
+        }
+        val roadOverlay = RoadManager.buildRoadOverlay(road, 0xAA0000FF.toInt(), 10.5F)
+        mapFragment.route = roadOverlay
         mapView.overlays.add(roadOverlay)
         //Marker at each node
         val nodeIcon = AppCompatResources.getDrawable(context, R.drawable.ic_round_stop_24)
@@ -104,9 +97,12 @@ class MarkerWindow(val context: Context, mapView: MapView) :
             nodeMarker.snippet = node.mInstructions
             nodeMarker.subDescription = Road.getLengthDurationText(mapView.context, node.mLength, node.mDuration)
         }
+
+        mapView.invalidate()
     }
 
     override fun onClose() {
+        getMapView()
         close()
     }
 
