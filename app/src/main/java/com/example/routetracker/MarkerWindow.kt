@@ -46,40 +46,45 @@ class MarkerWindow(val context: Context, mapView: MapView, val mapFragment: MapF
         }
     }
 
-//setting the title of the place to the textview
-    fun seTitle(title: String){
+    //setting the title of the place to the textview
+    fun seTitle(title: String) {
         view.findViewById<TextView>(R.id.tvTitle).text = title
     }
 
 
-    private fun addMarker( point: GeoPoint, title: String) {
+    private fun addMarker(point: GeoPoint, title: String) {
         val startMarker = Marker(mapView)
         startMarker.position = point
         startMarker.title = title
         startMarker.icon = AppCompatResources.getDrawable(context, R.drawable.ic_baseline_position)
         startMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+        if (mapFragment.destinationMarker != null) {
+            mapView.overlays.remove(mapFragment.destinationMarker)
+        }
+        mapFragment.destinationMarker = startMarker
         mapView.overlays?.add(startMarker)
         mapView.invalidate()
+
     }
 
-     fun addingRouteLocations(startPoint: GeoPoint, endPoint: GeoPoint) {
+    fun addingRouteLocations(startPoint: GeoPoint, endPoint: GeoPoint) {
         val roadManager = OSRMRoadManager(context, "MY_USER_AGENT")
 
         val routePoints = ArrayList<GeoPoint>()
         routePoints.add(startPoint)
         routePoints.add(endPoint)
-         CoroutineScope(Dispatchers.IO).launch {
-             gettingRoad(roadManager, routePoints)
-             mapView.invalidate()
-         }
-        addMarker( endPoint, "Destination")
+        CoroutineScope(Dispatchers.IO).launch {
+            gettingRoad(roadManager, routePoints)
+            mapView.invalidate()
+        }
+        addMarker(endPoint, "Destination")
     }
 
     private fun gettingRoad(roadManager: OSRMRoadManager, waypoints: ArrayList<GeoPoint>) {
         // Retrieving road
         roadManager.setMean(OSRMRoadManager.MEAN_BY_FOOT)
         val road = roadManager.getRoad(waypoints)
-        if(mapFragment.route != null){
+        if (mapFragment.route != null) {
             mapView.overlays.remove(mapFragment.route)
         }
         val roadOverlay = RoadManager.buildRoadOverlay(road, 0xAA0000FF.toInt(), 10.5F)
@@ -95,14 +100,14 @@ class MarkerWindow(val context: Context, mapView: MapView, val mapFragment: MapF
             nodeMarker.title = "Step $i"
             mapView.overlays.add(nodeMarker)
             nodeMarker.snippet = node.mInstructions
-            nodeMarker.subDescription = Road.getLengthDurationText(mapView.context, node.mLength, node.mDuration)
+            nodeMarker.subDescription =
+                Road.getLengthDurationText(mapView.context, node.mLength, node.mDuration)
         }
 
         mapView.invalidate()
     }
 
     override fun onClose() {
-        getMapView()
         close()
     }
 

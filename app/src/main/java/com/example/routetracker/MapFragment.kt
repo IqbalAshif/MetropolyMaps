@@ -53,9 +53,10 @@ class MapFragment : Fragment(), LocationListener {
     private lateinit var marker: Marker
     private lateinit var path: Polyline
     var route: Overlay? = null
+    var destinationMarker: Marker? = null
 
     var pois: MutableList<POI> = mutableListOf()
-    private var poisHidden : Boolean = true
+    private var poisHidden: Boolean = true
 
     private lateinit var toggle: FloatingActionButton
     private lateinit var info: FloatingActionButton
@@ -94,15 +95,18 @@ class MapFragment : Fragment(), LocationListener {
         map.isTilesScaledToDpi = true
         map.setMultiTouchControls(true)
         map.controller.setZoom(3.0)
-        map.setOnTouchListener { v, e -> run {
-            if(e.action == MotionEvent.ACTION_DOWN) v.tag = true // If drag possibly started
-            else if(e.action == MotionEvent.ACTION_MOVE && v.tag == true) panning = true // Is drag not click
-            else v.tag = false // It was not a drag
-            false
-        } }
+        map.setOnTouchListener { v, e ->
+            run {
+                if (e.action == MotionEvent.ACTION_DOWN) v.tag = true // If drag possibly started
+                else if (e.action == MotionEvent.ACTION_MOVE && v.tag == true) panning =
+                    true // Is drag not click
+                else v.tag = false // It was not a drag
+                false
+            }
+        }
         map.addMapListener(object : MapAdapter() {
             override fun onZoom(event: ZoomEvent?): Boolean {
-                Log.e("Zoom",event?.zoomLevel.toString())
+                Log.e("Zoom", event?.zoomLevel.toString())
                 if (event != null && pois.isNotEmpty())
                     if (event.zoomLevel >= 17.5)
                         hidePointsOfInterest()
@@ -180,20 +184,18 @@ class MapFragment : Fragment(), LocationListener {
         map.overlays.add(marker)
     }
 
-    fun hidePointsOfInterest()
-    {
+    fun hidePointsOfInterest() {
         map.overlays.forEach {
-            if(it != path && it != marker) {
+            if (it != path && it != marker) {
                 it as Marker
                 it.alpha = 0f
             }
         }
     }
 
-    fun showPointsOfInterest()
-    {
+    fun showPointsOfInterest() {
         map.overlays.forEach {
-            if(it != path && it != marker) {
+            if (it != path && it != marker) {
                 it as Marker
                 it.alpha = 1f
             }
@@ -204,21 +206,22 @@ class MapFragment : Fragment(), LocationListener {
     fun createPointsOfInterest() {
         CoroutineScope(Dispatchers.Unconfined).launch {
             val overlays: MutableList<Overlay> = mutableListOf()
-            map.overlays.removeAll { it != marker && it != path && it != route} // Remove old overlays if any exist
+            map.overlays.removeAll { it != marker && it != path && it != route && it != destinationMarker } // Remove old overlays if any exist
             pois.forEach {
                 val poimarker = Marker(map)
-                if(it.thumbnail != null) poimarker.icon = BitmapDrawable(resources, it.mThumbnail.scale(100, 100))
+                if (it.thumbnail != null) poimarker.icon =
+                    BitmapDrawable(resources, it.mThumbnail.scale(100, 100))
                 poimarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
                 poimarker.position = it.mLocation
                 poimarker.isFlat = true
 
-                val infoWindow = MarkerWindow(  requireContext(), map, this@MapFragment)
+                val infoWindow = MarkerWindow(requireContext(), map, this@MapFragment)
                 infoWindow.seTitle(it.mDescription.takeWhile { it != ',' })
 
-                infoWindow.onRoute= {
+                infoWindow.onRoute = {
                     val startPosition = marker.position
                     val endPosition = poimarker.position
-                    infoWindow.addingRouteLocations( startPosition, endPosition)
+                    infoWindow.addingRouteLocations(startPosition, endPosition)
                 }
                 poimarker.infoWindow = infoWindow
                 poimarker.closeInfoWindow()
@@ -267,7 +270,7 @@ class MapFragment : Fragment(), LocationListener {
     }
 
     override fun onProviderEnabled(provider: String) {
-        if(toggle.tag == false)
+        if (toggle.tag == false)
             toggle.setImageResource(R.drawable.ic_baseline_locationoff)
         else {
             toggle.startAnimation(rotateclock)
