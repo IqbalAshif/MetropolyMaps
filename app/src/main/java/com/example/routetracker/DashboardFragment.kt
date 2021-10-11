@@ -27,6 +27,8 @@ class DashboardFragment(private var mapFragment: MapFragment) : Fragment() {
     private var stepStartCount: Float = 0f
     private var stepEndCount: Float = 0f
 
+    private var loading = false
+
     /* UI */
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -123,11 +125,15 @@ class DashboardFragment(private var mapFragment: MapFragment) : Fragment() {
         stepSensor.enable()
     }
 
-    private fun onClick(view: View): Unit = fetchPointsOfInterest(view.tag as String, mapFragment.map.boundingBox) {
-        CoroutineScope(Dispatchers.Main).launch {
-            parentFragmentManager.popBackStack()
+    private fun onClick(view: View) {
+        if (loading) return
+        loading = true
+        fetchPointsOfInterest(view.tag as String, mapFragment.map.boundingBox) {
+            CoroutineScope(Dispatchers.Main).launch {
+                parentFragmentManager?.popBackStackImmediate()
+            }
+            mapFragment.pois = it.toMutableList()
+            mapFragment.createPointsOfInterest()
         }
-        mapFragment.pois = it.toMutableList()
-        mapFragment.createPointsOfInterest()
     }
 }

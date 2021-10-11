@@ -59,7 +59,7 @@ class MapFragment : Fragment(), LocationListener {
     private lateinit var rotateanticlock: Animation
 
 
-    var panning = false
+    var panning = true
 
     companion object {
         fun newInstance() = MapFragment()
@@ -88,13 +88,15 @@ class MapFragment : Fragment(), LocationListener {
         map.controller.setZoom(3.0)
         map.setOnTouchListener { v, e -> run {
             if(e.action == MotionEvent.ACTION_DOWN) v.tag = true // If drag possibly started
-            else if(e.action == MotionEvent.ACTION_MOVE && v.tag == true) panning = true // Is drag not click
+            else if(e.action == MotionEvent.ACTION_MOVE && v.tag == true) {
+                if(!panning) info.startAnimation(appear)
+                panning = true
+            } // Is drag not click
             else v.tag = false // It was not a drag
             false
         } }
         map.addMapListener(object : MapAdapter() {
             override fun onZoom(event: ZoomEvent?): Boolean {
-                Log.e("Zoom",event?.zoomLevel.toString())
                 if (event != null && pois.isNotEmpty())
                     if (event.zoomLevel >= 17.5)
                         hidePointsOfInterest()
@@ -109,8 +111,8 @@ class MapFragment : Fragment(), LocationListener {
 
         // Gps Fab
         toggle = view.findViewById<FloatingActionButton>(R.id.toggle)
+        toggle.imageTintList = ColorStateList.valueOf(Color.parseColor("#4285F4"))
         toggle.tag = false // Recording?
-        toggle.backgroundTintList = ColorStateList.valueOf(Color.GREEN + Color.GREEN * 40 / 100)
         toggle.setOnClickListener {
             if (toggle.tag == false && requestLocationPermissions(requireActivity()))
                 enableGps() // Start recording
@@ -120,6 +122,7 @@ class MapFragment : Fragment(), LocationListener {
 
         // Info Fab
         info = view.findViewById<FloatingActionButton>(R.id.info)
+        info.imageTintList = ColorStateList.valueOf(Color.WHITE)
         info.setOnClickListener {
             parentFragmentManager.beginTransaction().hide(this)
                 .add(R.id.fragmentContainerView, DashboardFragment.newInstance(this))
@@ -168,7 +171,7 @@ class MapFragment : Fragment(), LocationListener {
 
         // Position
         marker = Marker(map)
-        marker.setOnMarkerClickListener { _, _ -> panning = false; true }
+        marker.setOnMarkerClickListener { _, _ -> if(panning) info.startAnimation(disappear); panning = false; true }
         marker.icon =
             AppCompatResources.getDrawable(this.requireContext(), R.drawable.ic_baseline_position)
         marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
@@ -228,7 +231,9 @@ class MapFragment : Fragment(), LocationListener {
     private fun enableGps() {
         if (locationProvider(requireContext()) != null) {
             toggle.tag = true
-            toggle.backgroundTintList = ColorStateList.valueOf(Color.RED + Color.RED * 40 / 100)
+            if(panning) info.startAnimation(disappear)
+            panning = false
+            toggle.startAnimation(rotateclock)
             lm.requestLocationUpdates(locationProvider(requireContext())!!, 1000, 15f, this)
         } else
             requestLocationPermissions(requireActivity())
@@ -237,15 +242,14 @@ class MapFragment : Fragment(), LocationListener {
     private fun disableGps(animation: Boolean = true) {
         toggle.tag = false
 
-        if (animation && path.actualPoints.isNotEmpty()) {
-            info.startAnimation(disappear)
+        if (animation) {
+            if(!panning) info.startAnimation(appear)
+            panning = true
             toggle.startAnimation(rotateanticlock)
             toggle.setImageResource(R.drawable.ic_baseline_locationoff)
         }
 
         // Stop recording
-        toggle.backgroundTintList =
-            ColorStateList.valueOf(Color.GREEN + Color.GREEN * 40 / 100)
         lm.removeUpdates(this)
 
         // Clear map
@@ -296,11 +300,8 @@ class MapFragment : Fragment(), LocationListener {
 
         if (path.actualPoints.isEmpty()) // First location
         {
-            info.startAnimation(appear)
             marker.alpha = 1f
 
-
-            toggle.startAnimation(rotateclock)
             toggle.setImageResource(R.drawable.ic_baseline_location)
 
             map.controller.setZoom(18.0)
