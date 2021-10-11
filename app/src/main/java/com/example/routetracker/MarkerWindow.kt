@@ -22,6 +22,7 @@ import kotlin.coroutines.coroutineContext
 
 class MarkerWindow(val context: Context, mapView: MapView) :
     InfoWindow(R.layout.info_window, mapView) {
+
     lateinit var onRoute: () -> Unit
 
     override fun onOpen(item: Any?) {
@@ -29,6 +30,8 @@ class MarkerWindow(val context: Context, mapView: MapView) :
         val routeButton = view.findViewById<Button>(R.id.btRoute)
         //clicking route button
         routeButton.setOnClickListener {
+
+
             onRoute()
 
         }
