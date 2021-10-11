@@ -213,14 +213,14 @@ class MapFragment : Fragment(), LocationListener {
 
                 val infoWindow = MarkerWindow(  requireContext(), map)
                 infoWindow.seTitle(it.mDescription.takeWhile { it != ',' })
-                infoWindow.startPoint = marker.position
-                infoWindow.endPoint = poimarker.position
-               /* infoWindow.onRoute= {
+               // infoWindow.startPoint = marker.position
+               // infoWindow.endPoint = poimarker.position
+                infoWindow.onRoute= {
                     var startPosition = marker.position
                     var endPosition = poimarker.position
+                    infoWindow.addingRouteLocations( startPosition, endPosition)
                 }
 
-                */
                 poimarker.infoWindow = infoWindow
                 poimarker.closeInfoWindow()
 

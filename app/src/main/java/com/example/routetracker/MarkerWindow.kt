@@ -22,16 +22,13 @@ import kotlin.coroutines.coroutineContext
 
 class MarkerWindow(val context: Context, mapView: MapView) :
     InfoWindow(R.layout.info_window, mapView) {
-    lateinit var startPoint: GeoPoint
-    lateinit var endPoint: GeoPoint
+    lateinit var onRoute: () -> Unit
 
     override fun onOpen(item: Any?) {
         closeAllInfoWindowsOn(mapView)
         val routeButton = view.findViewById<Button>(R.id.btRoute)
         routeButton.setOnClickListener {
-            //TODO route suggestion
-           // addMarker(startPoint, "Start")
-             addingRouteLocations( startPoint, endPoint)
+            onRoute()
 
         }
 
@@ -58,7 +55,7 @@ class MarkerWindow(val context: Context, mapView: MapView) :
     }
 
     @SuppressLint("CheckResult")
-    private fun addingRouteLocations(startPoint: GeoPoint, endPoint: GeoPoint) {
+     fun addingRouteLocations(startPoint: GeoPoint, endPoint: GeoPoint) {
         val roadManager = OSRMRoadManager(context, "MY_USER_AGENT")
 
         val routePoints = ArrayList<GeoPoint>()
