@@ -29,8 +29,10 @@
         android:clickable="true"
         android:contentDescription="@string/record_location"
         android:focusable="true"
+        app:backgroundTint="#FFFFFF"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
+        app:maxImageSize="30dp"
         app:srcCompat="@drawable/ic_baseline_locationoff"
         tools:ignore="SpeakableTextPresentCheck" />
 
@@ -42,11 +44,12 @@
         android:clickable="true"
         android:contentDescription="@string/info"
         android:focusable="true"
-        android:visibility="invisible"
-        app:backgroundTint="@android:color/holo_green_dark"
+        android:visibility="visible"
+        app:backgroundTint="#1A73E8"
         app:fabSize="mini"
         app:layout_constraintBottom_toTopOf="@+id/toggle"
         app:layout_constraintEnd_toEndOf="@id/toggle"
         app:layout_constraintStart_toStartOf="@+id/toggle"
-        app:srcCompat="@android:drawable/ic_menu_info_details" />
+        app:maxImageSize="25dp"
+        app:srcCompat="@drawable/ic_baseline_search" />
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -20,13 +20,17 @@ import kotlin.coroutines.coroutineContext
 
 class MarkerWindow(mapView: MapView) :
     InfoWindow(R.layout.info_window, mapView) {
+
+    lateinit var onClick : () -> Unit
+
     override fun onOpen(item: Any?) {
         closeAllInfoWindowsOn(mapView)
 
         val routeButton = mView.findViewById<Button>(R.id.btRoute)
         routeButton.setOnClickListener {
-        //TODO route suggestion
+            onClick()
         }
+
         mView.setOnClickListener {
             close()
         }
