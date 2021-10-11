@@ -109,12 +109,7 @@ class MapFragment : Fragment(), LocationListener {
                 return super.onZoom(event)
             }
         })
-        val startPoint = GeoPoint(60.22335, 24.81799)
 
-      //  val mw = MarkerWindow(map)
-
-        addMarker(startPoint, "Start")
-        addingRouteLocations( startPoint)
 
         createOverlays()
 
@@ -216,8 +211,16 @@ class MapFragment : Fragment(), LocationListener {
                 poimarker.position = it.mLocation
                 poimarker.isFlat = true
 
-                val infoWindow = MarkerWindow(map)
+                val infoWindow = MarkerWindow(  requireContext(), map)
                 infoWindow.seTitle(it.mDescription.takeWhile { it != ',' })
+                infoWindow.startPoint = marker.position
+                infoWindow.endPoint = poimarker.position
+               /* infoWindow.onRoute= {
+                    var startPosition = marker.position
+                    var endPosition = poimarker.position
+                }
+
+                */
                 poimarker.infoWindow = infoWindow
                 poimarker.closeInfoWindow()
 
@@ -320,60 +323,4 @@ class MapFragment : Fragment(), LocationListener {
         map.invalidate()
     }
 
-     private fun addMarker( point: GeoPoint, title: String) {
-        val startMarker = Marker(map)
-        startMarker.position = point
-        startMarker.title = title
-        startMarker.icon = AppCompatResources.getDrawable(this.requireContext(), R.drawable.ic_baseline_position)
-        startMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-        map.overlays?.add(startMarker)
-        map.invalidate()
-    }
-
-     private fun addingRouteLocations(startPoint: GeoPoint) {
-        val roadManager = OSRMRoadManager(context, "MY_USER_AGENT")
-
-        val routePoints = ArrayList<GeoPoint>()
-        routePoints.add(startPoint)
-        routePoints.add(GeoPoint(60.22335, 24.81799))
-        val endPoint = GeoPoint(60.22286, 24.75908)
-        routePoints.add(endPoint)
-
-
-         Observable.fromCallable{
-             gettingRoad(roadManager, routePoints)
-        }
-            .subscribeOn(Schedulers.io())
-            .observeOn(AndroidSchedulers.mainThread())
-            .subscribe({
-
-            }, {
-
-            }, {
-                map.invalidate()
-            })
-
-        addMarker( endPoint, "Destination")
-    }
-
-
-     private fun gettingRoad(roadManager: OSRMRoadManager, waypoints: ArrayList<GeoPoint>) {
-        // Retrieving road
-
-        val road = roadManager.getRoad(waypoints)
-        val roadOverlay = RoadManager.buildRoadOverlay(road)
-        map.overlays.add(roadOverlay)
-    //Marker at each node
-        val nodeIcon = AppCompatResources.getDrawable(this.requireContext(), R.drawable.ic_round_stop_24)
-        for (i in 0 until road.mNodes.size) {
-            val node = road.mNodes[i]
-            val nodeMarker = Marker(map)
-            nodeMarker.position = node.mLocation
-            nodeMarker.icon = nodeIcon
-            nodeMarker.title = "Step $i"
-            map.overlays.add(nodeMarker)
-            nodeMarker.snippet = node.mInstructions
-            nodeMarker.subDescription = Road.getLengthDurationText(map.context, node.mLength, node.mDuration)
-        }
-    }
 }
