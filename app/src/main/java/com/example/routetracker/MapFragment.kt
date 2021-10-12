@@ -183,7 +183,7 @@ class MapFragment : Fragment(), LocationListener {
 
         // Position
         marker = Marker(map)
-        marker.setOnMarkerClickListener { _, _ -> if(panning) info.startAnimation(disappear); panning = false; true }
+        marker.setOnMarkerClickListener { _, _ -> if(panning) info.startAnimation(disappear); panning = false; Log.d("Panning: ","false"); true }
         marker.icon =
             AppCompatResources.getDrawable(this.requireContext(), R.drawable.ic_baseline_position)
         marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
@@ -313,7 +313,6 @@ class MapFragment : Fragment(), LocationListener {
                     map.overlays.remove(route)
                 }
                 route = it
-                Log.e("Route Created",it.actualPoints.toString())
                 map.overlays.add(route)
             }
 
