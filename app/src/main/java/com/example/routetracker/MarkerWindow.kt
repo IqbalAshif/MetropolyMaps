@@ -89,7 +89,9 @@ class MarkerWindow(val context: Context, mapView: MapView, val mapFragment: MapF
         mapFragment.route = roadOverlay
         mapView.overlays.add(roadOverlay)
         //Marker at each node
+
         val nodeIcon = AppCompatResources.getDrawable(context, R.drawable.ic_baseline_stop_24)
+
         for (i in 0 until road.mNodes.size) {
             val node = road.mNodes[i]
             val nodeMarker = Marker(mapView)

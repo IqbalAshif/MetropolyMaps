@@ -74,3 +74,4 @@ fun fetchPointsOfInterestUrl(query: String, result : (List<POI>) -> Unit)
         }
     }
 }
+
