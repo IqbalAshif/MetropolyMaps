@@ -52,4 +52,21 @@
         app:layout_constraintStart_toStartOf="@+id/toggle"
         app:maxImageSize="25dp"
         app:srcCompat="@drawable/ic_baseline_search" />
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/close"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="16dp"
+        android:clickable="true"
+        android:contentDescription="@string/close"
+        android:focusable="true"
+        android:visibility="invisible"
+        app:backgroundTint="#E57373"
+        app:fabSize="mini"
+        app:layout_constraintBottom_toBottomOf="@id/toggle"
+        app:layout_constraintEnd_toStartOf="@id/toggle"
+        app:layout_constraintTop_toTopOf="@id/toggle"
+        app:maxImageSize="25dp"
+        app:srcCompat="@android:drawable/ic_menu_close_clear_cancel" />
 </androidx.constraintlayout.widget.ConstraintLayout>
