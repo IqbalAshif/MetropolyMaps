@@ -23,16 +23,10 @@ import androidx.fragment.app.Fragment
 import androidx.preference.PreferenceManager
 import com.example.routetracker.helpers.*
 import com.google.android.material.floatingactionbutton.FloatingActionButton
-import io.reactivex.Observable
-import io.reactivex.android.schedulers.AndroidSchedulers
-import io.reactivex.schedulers.Schedulers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.osmdroid.bonuspack.location.POI
-import org.osmdroid.bonuspack.routing.OSRMRoadManager
-import org.osmdroid.bonuspack.routing.Road
-import org.osmdroid.bonuspack.routing.RoadManager
 import org.osmdroid.config.Configuration
 import org.osmdroid.events.MapAdapter
 import org.osmdroid.events.ZoomEvent
@@ -42,7 +36,6 @@ import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Overlay
 import org.osmdroid.views.overlay.Polyline
-import kotlin.collections.ArrayList
 
 
 class MapFragment : Fragment(), LocationListener {
@@ -52,7 +45,8 @@ class MapFragment : Fragment(), LocationListener {
     lateinit var map: MapView
     private lateinit var marker: Marker
     private lateinit var path: Polyline
-
+    var route: Overlay? = null
+    var destinationMarker: Marker? = null
     var pois: MutableList<POI> = mutableListOf()
     private var poisHidden : Boolean = true
 
@@ -113,6 +107,7 @@ class MapFragment : Fragment(), LocationListener {
         })
 
 
+
         createOverlays()
 
         // Gps Fab
@@ -153,6 +148,9 @@ class MapFragment : Fragment(), LocationListener {
             map.controller.setCenter(parseLocation(requireActivity().intent.data.toString()))
             map.controller.setZoom(18.0)
         }
+
+
+
 
         return view
     }
@@ -206,7 +204,7 @@ class MapFragment : Fragment(), LocationListener {
     fun createPointsOfInterest() {
         CoroutineScope(Dispatchers.Unconfined).launch {
             val overlays: MutableList<Overlay> = mutableListOf()
-            map.overlays.removeAll { it != marker && it != path } // Remove old overlays if any exist
+            map.overlays.removeAll { it != marker && it != path && it != route && it != destinationMarker } // Remove old overlays if any exist
             pois.forEach {
                 val poimarker = Marker(map)
                 if(it.thumbnail != null) poimarker.icon = BitmapDrawable(resources, it.mThumbnail.scale(100, 100))
@@ -214,15 +212,13 @@ class MapFragment : Fragment(), LocationListener {
                 poimarker.position = it.mLocation
                 poimarker.isFlat = true
 
-                val infoWindow = MarkerWindow(  requireContext(), map)
+                val infoWindow = MarkerWindow(requireContext(), map, this@MapFragment)
                 infoWindow.seTitle(it.mDescription.takeWhile { it != ',' })
-
-                infoWindow.onRoute= {
-                    var startPosition = marker.position
-                    var endPosition = poimarker.position
-                    infoWindow.addingRouteLocations( startPosition, endPosition)
+                infoWindow.onRoute = {
+                    val startPosition = marker.position
+                    val endPosition = poimarker.position
+                    infoWindow.addingRouteLocations(startPosition, endPosition)
                 }
-
                 poimarker.infoWindow = infoWindow
                 poimarker.closeInfoWindow()
 
@@ -269,6 +265,7 @@ class MapFragment : Fragment(), LocationListener {
         map.invalidate()
 
     }
+
 
     override fun onProviderEnabled(provider: String) {
         if(toggle.tag == false)
