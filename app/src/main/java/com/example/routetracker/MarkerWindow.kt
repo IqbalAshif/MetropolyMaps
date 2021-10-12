@@ -1,3 +1,4 @@
+
 package com.example.routetracker
 
 import android.annotation.SuppressLint
@@ -11,9 +12,6 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContentProviderCompat.requireContext
 import androidx.fragment.app.Fragment
 import com.example.routetracker.helpers.locationProvider
-import io.reactivex.Observable
-import io.reactivex.android.schedulers.AndroidSchedulers
-import io.reactivex.schedulers.Schedulers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -91,7 +89,9 @@ class MarkerWindow(val context: Context, mapView: MapView, val mapFragment: MapF
         mapFragment.route = roadOverlay
         mapView.overlays.add(roadOverlay)
         //Marker at each node
-        val nodeIcon = AppCompatResources.getDrawable(context, R.drawable.ic_round_stop_24)
+
+        val nodeIcon = AppCompatResources.getDrawable(context, R.drawable.ic_baseline_stop_24)
+
         for (i in 0 until road.mNodes.size) {
             val node = road.mNodes[i]
             val nodeMarker = Marker(mapView)
