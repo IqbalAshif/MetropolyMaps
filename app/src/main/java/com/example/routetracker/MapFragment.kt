@@ -199,6 +199,7 @@ class MapFragment : Fragment(), LocationListener {
     fun showPointsOfInterest()
     {
         poiMarkers.forEach { it as Marker; it.alpha = 1f}
+
     }
 
 
@@ -213,6 +214,7 @@ class MapFragment : Fragment(), LocationListener {
                 poimarker.isFlat = true
 
                 val infoWindow = MarkerWindow(requireContext(), map, this@MapFragment)
+
                 infoWindow.seTitle(poi.mDescription.takeWhile { it != ',' })
                 infoWindow.onRoute = {
                     destination = poimarker.position

@@ -83,9 +83,9 @@ fun fetchPointsOfInterestUrl(query: String, result : (List<POI>) -> Unit)
     }
 }
 
+
 fun createPath(context: Context?, startPoint: GeoPoint, endPoint: GeoPoint, onFinished: (Polyline?) -> Unit)
 {
-
     val routePoints = ArrayList<GeoPoint>()
     routePoints.add(startPoint)
     routePoints.add(endPoint)

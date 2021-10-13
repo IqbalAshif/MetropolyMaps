@@ -32,6 +32,7 @@ class MarkerWindow(val context: Context, mapView: MapView, val mapFragment: MapF
     override fun onOpen(item: Any?) {
         closeAllInfoWindowsOn(mapView)
 
+
         //clicking route button
         view.findViewById<Button>(R.id.btRoute).setOnClickListener { onRoute() }
 
