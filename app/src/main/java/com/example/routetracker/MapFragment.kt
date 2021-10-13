@@ -183,7 +183,7 @@ class MapFragment : Fragment(), LocationListener {
     fun hidePointsOfInterest()
     {
         map.overlays.forEach {
-            if(it != path && it != marker) {
+            if(it != path && it != marker && it != route && it != destinationMarker) {
                 it as Marker
                 it.alpha = 0f
             }

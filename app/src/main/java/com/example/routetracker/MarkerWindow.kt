@@ -49,21 +49,6 @@ class MarkerWindow(val context: Context, mapView: MapView, val mapFragment: MapF
     }
 
 
-    private fun addMarker(point: GeoPoint, title: String) {
-        val startMarker = Marker(mapView)
-        startMarker.position = point
-        startMarker.title = title
-        startMarker.icon = AppCompatResources.getDrawable(context, R.drawable.ic_baseline_position)
-        startMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-        if (mapFragment.destinationMarker != null) {
-            mapView.overlays.remove(mapFragment.destinationMarker)
-        }
-        mapFragment.destinationMarker = startMarker
-        mapView.overlays?.add(startMarker)
-        mapView.invalidate()
-
-    }
-
     fun addingRouteLocations(startPoint: GeoPoint, endPoint: GeoPoint) {
         val roadManager = OSRMRoadManager(context, "MY_USER_AGENT")
 
@@ -74,7 +59,6 @@ class MarkerWindow(val context: Context, mapView: MapView, val mapFragment: MapF
             gettingRoad(roadManager, routePoints)
             mapView.invalidate()
         }
-        addMarker(endPoint, "Destination")
     }
 
     private fun gettingRoad(roadManager: OSRMRoadManager, waypoints: ArrayList<GeoPoint>) {
