@@ -15,4 +15,6 @@
     <string name="car">Car</string>
     <string name="public_other">Public/Other</string>
     <string name="close">close</string>
+    <string name="type">type</string>
+    <string name="showRoute">Show route</string>
 </resources>
