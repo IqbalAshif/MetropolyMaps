@@ -3,14 +3,22 @@ package com.example.routetracker.helpers
 import android.content.Context
 import android.location.Geocoder
 import android.util.Log
+import androidx.appcompat.content.res.AppCompatResources
 import com.example.routetracker.BuildConfig
+import com.example.routetracker.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.osmdroid.bonuspack.location.NominatimPOIProvider
 import org.osmdroid.bonuspack.location.POI
+import org.osmdroid.bonuspack.routing.OSRMRoadManager
+import org.osmdroid.bonuspack.routing.Road
+import org.osmdroid.bonuspack.routing.RoadManager
 import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.Marker
+import org.osmdroid.views.overlay.Polyline
 import java.io.IOException
 import java.lang.Error
 
@@ -73,4 +81,40 @@ fun fetchPointsOfInterestUrl(query: String, result : (List<POI>) -> Unit)
             Log.e("Network Error", "Failed to fetch points of interest")
         }
     }
+}
+
+fun createPath(context: Context?, startPoint: GeoPoint, endPoint: GeoPoint, onFinished: (Polyline?) -> Unit)
+{
+
+    val routePoints = ArrayList<GeoPoint>()
+    routePoints.add(startPoint)
+    routePoints.add(endPoint)
+     CoroutineScope(Dispatchers.IO).launch {
+         onFinished(getPath(context, routePoints))
+    }
+}
+
+fun getPath( context: Context?, waypoints: ArrayList<GeoPoint>) : Polyline?
+{
+    // Retrieving road
+    val roadManager = OSRMRoadManager(context, userAgent)
+    roadManager.setMean(OSRMRoadManager.MEAN_BY_FOOT)
+    val road = roadManager.getRoad(waypoints)
+    return RoadManager.buildRoadOverlay(road, 0xAA0000FF.toInt(), 10.5F)
+
+    /*
+    //Marker at each node
+    val nodeIcon = AppCompatResources.getDrawable(mapView.context, R.drawable.ic_baseline_stop_24)
+    for (i in 0 until road.mNodes.size) {
+        val node = road.mNodes[i]
+        val nodeMarker = Marker(mapView)
+        nodeMarker.position = node.mLocation
+        nodeMarker.icon = nodeIcon
+        nodeMarker.title = "Step $i"
+        mapView.overlays.add(nodeMarker)
+        nodeMarker.snippet = node.mInstructions
+        nodeMarker.subDescription =
+            Road.getLengthDurationText(mapView.context, node.mLength, node.mDuration)
+    }
+    */
 }

@@ -19,6 +19,7 @@ import android.view.animation.AnimationUtils
 import android.widget.Toast
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.graphics.scale
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.preference.PreferenceManager
 import com.example.routetracker.helpers.*
@@ -43,15 +44,17 @@ class MapFragment : Fragment(), LocationListener {
     private lateinit var lm: LocationManager
 
     lateinit var map: MapView
+    var pois: MutableList<POI> = mutableListOf()
+    var destination: GeoPoint? = null
+
     private lateinit var marker: Marker
     private lateinit var path: Polyline
     var route: Overlay? = null
-    var destinationMarker: Marker? = null
-    var pois: MutableList<POI> = mutableListOf()
-    private var poisHidden : Boolean = true
+    val poiMarkers: MutableList<Overlay> = mutableListOf()
 
     private lateinit var toggle: FloatingActionButton
     private lateinit var info: FloatingActionButton
+    private lateinit var close: FloatingActionButton
 
     // Animations
     private lateinit var appear: Animation
@@ -90,7 +93,7 @@ class MapFragment : Fragment(), LocationListener {
         map.setOnTouchListener { v, e -> run {
             if(e.action == MotionEvent.ACTION_DOWN) v.tag = true // If drag possibly started
             else if(e.action == MotionEvent.ACTION_MOVE && v.tag == true) {
-                if(!panning) info.startAnimation(appear)
+                if(!panning) {info.startAnimation(appear); Log.d("Panning: ","true")}
                 panning = true
             } // Is drag not click
             else v.tag = false // It was not a drag
@@ -119,6 +122,14 @@ class MapFragment : Fragment(), LocationListener {
                 enableGps() // Start recording
             else
                 disableGps() // Stop recording
+        }
+
+        // Close Fab
+        close = view.findViewById<FloatingActionButton>(R.id.close)
+        close.setOnClickListener {
+            close.visibility = View.INVISIBLE
+            destination = null
+            map.overlays.remove(route)
         }
 
         // Info Fab
@@ -172,7 +183,7 @@ class MapFragment : Fragment(), LocationListener {
 
         // Position
         marker = Marker(map)
-        marker.setOnMarkerClickListener { _, _ -> if(panning) info.startAnimation(disappear); panning = false; true }
+        marker.setOnMarkerClickListener { _, _ -> if(panning) info.startAnimation(disappear); panning = false; Log.d("Panning: ","false"); true }
         marker.icon =
             AppCompatResources.getDrawable(this.requireContext(), R.drawable.ic_baseline_position)
         marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
@@ -182,51 +193,43 @@ class MapFragment : Fragment(), LocationListener {
 
     fun hidePointsOfInterest()
     {
-        map.overlays.forEach {
-            if(it != path && it != marker) {
-                it as Marker
-                it.alpha = 0f
-            }
-        }
+        poiMarkers.forEach { it as Marker; it.alpha = 0f}
     }
 
     fun showPointsOfInterest()
     {
-        map.overlays.forEach {
-            if(it != path && it != marker && it != route && it != destinationMarker) {
-                it as Marker
-                it.alpha = 1f
-            }
-        }
+        poiMarkers.forEach { it as Marker; it.alpha = 1f}
     }
 
 
     fun createPointsOfInterest() {
         CoroutineScope(Dispatchers.Unconfined).launch {
-            val overlays: MutableList<Overlay> = mutableListOf()
-            map.overlays.removeAll { it != marker && it != path && it != route && it != destinationMarker } // Remove old overlays if any exist
-            pois.forEach {
+            map.overlays.removeAll(poiMarkers) // Remove old overlays if any exist
+            pois.forEach { poi ->
                 val poimarker = Marker(map)
-                if(it.thumbnail != null) poimarker.icon = BitmapDrawable(resources, it.mThumbnail.scale(100, 100))
+                if(poi.thumbnail != null) poimarker.icon = BitmapDrawable(resources, poi.mThumbnail.scale(100, 100))
                 poimarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
-                poimarker.position = it.mLocation
+                poimarker.position = poi.mLocation
                 poimarker.isFlat = true
 
                 val infoWindow = MarkerWindow(requireContext(), map, this@MapFragment)
-                infoWindow.seTitle(it.mDescription.takeWhile { it != ',' })
+                infoWindow.seTitle(poi.mDescription.takeWhile { it != ',' })
                 infoWindow.onRoute = {
-                    val startPosition = marker.position
-                    val endPosition = poimarker.position
-                    infoWindow.addingRouteLocations(startPosition, endPosition)
+                    destination = poimarker.position
+                    path.setPoints(listOf())
+                    navigationModeLocation(marker.position)
+
+                    if(!close.isVisible)
+                        close.visibility = View.VISIBLE
                 }
                 poimarker.infoWindow = infoWindow
                 poimarker.closeInfoWindow()
 
-                overlays.add(poimarker)
+                poiMarkers.add(poimarker)
             }
 
             CoroutineScope(Dispatchers.Main).launch {
-                map.overlays.addAll(overlays)
+                map.overlays.addAll(poiMarkers)
                 map.invalidate()
             }
         }
@@ -249,6 +252,7 @@ class MapFragment : Fragment(), LocationListener {
         toggle.tag = false
 
         if (animation) {
+            Log.d("DisableGps: ","Animated")
             if(!panning) info.startAnimation(appear)
             panning = true
             toggle.startAnimation(rotateanticlock)
@@ -290,19 +294,35 @@ class MapFragment : Fragment(), LocationListener {
 
     override fun onLocationChanged(p0: Location) {
         Log.d("GEOLOCATION", "new latitude: ${p0.latitude} and longitude: ${p0.longitude}")
+        if(!close.isVisible) // Follow mode
+            pathingModeLocation(GeoPoint(p0.latitude, p0.longitude))
+        else if(destination != null) // Navigation mode
+            navigationModeLocation(GeoPoint(p0.latitude, p0.longitude))
 
-        val point = GeoPoint(p0.latitude, p0.longitude)
+    }
 
-        // Marker
-        marker.position = point
-        marker.title =
-            point.longitude.roundToDecimal(5).toString() + ',' + point.latitude.roundToDecimal(5)
-                .toString()
+    private fun navigationModeLocation(location : GeoPoint)
+    {
+        updateMarker(location)
+        if (!panning) map.controller.setCenter(location)
 
-        CoroutineScope(Dispatchers.IO).launch {
-            marker.subDescription = getAddress(context, point)
+        createPath(context, destination!!,location){
+            // Path
+            if(it != null) {
+                if (route != null) {
+                    map.overlays.remove(route)
+                }
+                route = it
+                map.overlays.add(route)
+            }
+
+            map.invalidate()
         }
+    }
 
+    private fun pathingModeLocation(location : GeoPoint)
+    {
+        updateMarker(location)
 
         if (path.actualPoints.isEmpty()) // First location
         {
@@ -311,13 +331,24 @@ class MapFragment : Fragment(), LocationListener {
             toggle.setImageResource(R.drawable.ic_baseline_location)
 
             map.controller.setZoom(18.0)
-            map.controller.setCenter(point)
-        } else if (!panning) map.controller.setCenter(point)
+            map.controller.setCenter(location)
+        } else if (!panning) map.controller.setCenter(location)
 
-        // Path
-        path.addPoint(point)
-
+        path.addPoint(location)
         map.invalidate()
+    }
+
+    private fun updateMarker(location : GeoPoint)
+    {
+        // Marker
+        marker.position = location
+        marker.title =
+            location.longitude.roundToDecimal(5).toString() + ',' + location.latitude.roundToDecimal(5)
+                .toString()
+
+        CoroutineScope(Dispatchers.IO).launch {
+            marker.subDescription = getAddress(context, location)
+        }
     }
 
 }
