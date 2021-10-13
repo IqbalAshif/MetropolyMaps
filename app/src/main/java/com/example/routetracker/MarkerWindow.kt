@@ -34,7 +34,10 @@ class MarkerWindow(val context: Context, mapView: MapView, val mapFragment: MapF
 
 
         //clicking route button
-        view.findViewById<Button>(R.id.btRoute).setOnClickListener { onRoute() }
+        view.findViewById<Button>(R.id.btRoute).setOnClickListener {
+            onRoute()
+            close()
+        }
 
         mView.setOnClickListener { close() }
     }

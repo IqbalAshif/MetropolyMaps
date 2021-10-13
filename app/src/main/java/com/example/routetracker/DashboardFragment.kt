@@ -1,5 +1,7 @@
 package com.example.routetracker
 
+import android.content.Context
+import android.content.SharedPreferences
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -28,6 +30,7 @@ class DashboardFragment(private var mapFragment: MapFragment) : Fragment() {
     private var stepEndCount: Float = 0f
 
     private var loading = false
+
 
     /* UI */
     override fun onCreateView(
@@ -118,11 +121,31 @@ class DashboardFragment(private var mapFragment: MapFragment) : Fragment() {
     override fun onPause() {
         super.onPause()
         stepSensor.disable()
+        val sharedPreferences = this.requireActivity()
+            .getSharedPreferences("pref", Context.MODE_PRIVATE)
+        var editor = sharedPreferences.edit()
+        val steps = stepEndCount-stepStartCount
+        editor.putFloat("stepCounter", steps)
+        editor.commit()
     }
 
+    override fun onStop() {
+        super.onStop()
+        stepSensor.disable()
+        val sharedPreferences = this.requireActivity()
+            .getSharedPreferences("pref", Context.MODE_PRIVATE)
+        var editor = sharedPreferences.edit()
+        val steps = stepEndCount-stepStartCount
+        editor.putFloat("stepCounter", steps)
+        editor.commit()
+    }
     override fun onResume() {
         super.onResume()
         stepSensor.enable()
+        val sharedPreferences = this.requireActivity()
+            .getSharedPreferences("pref", Context.MODE_PRIVATE)
+        var editor = sharedPreferences.edit()
+        editor.putFloat("stepCounter", stepEndCount)
     }
 
     private fun onClick(view: View) {
