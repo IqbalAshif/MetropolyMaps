@@ -43,8 +43,11 @@ class MarkerWindow(val context: Context, mapView: MapView, val mapFragment: MapF
     }
 
     //setting the title of the place to the textview
-    fun seTitle(title: String) {
+    fun setTitle(title: String) {
         view.findViewById<TextView>(R.id.tvTitle).text = title
+    }
+    fun setType(type: String) {
+        view.findViewById<TextView>(R.id.tvType).text = type
     }
 
     override fun onClose() {

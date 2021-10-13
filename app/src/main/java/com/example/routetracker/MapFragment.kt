@@ -212,10 +212,10 @@ class MapFragment : Fragment(), LocationListener {
                 poimarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
                 poimarker.position = poi.mLocation
                 poimarker.isFlat = true
-
                 val infoWindow = MarkerWindow(requireContext(), map, this@MapFragment)
 
-                infoWindow.seTitle(poi.mDescription.takeWhile { it != ',' })
+                infoWindow.setTitle(poi.mDescription.takeWhile { it != ',' })
+                infoWindow.setType(poi.mType)
                 infoWindow.onRoute = {
                     destination = poimarker.position
                     path.setPoints(listOf())
