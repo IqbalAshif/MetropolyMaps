@@ -46,7 +46,6 @@ class MapFragment : Fragment(), LocationListener {
     private lateinit var marker: Marker
     private lateinit var path: Polyline
     var route: Overlay? = null
-    var destinationMarker: Marker? = null
     var pois: MutableList<POI> = mutableListOf()
     private var poisHidden : Boolean = true
 
@@ -183,7 +182,7 @@ class MapFragment : Fragment(), LocationListener {
     fun hidePointsOfInterest()
     {
         map.overlays.forEach {
-            if(it != path && it != marker && it != route && it != destinationMarker) {
+            if(it != path && it != marker && it != route ) {
                 it as Marker
                 it.alpha = 0f
             }
@@ -193,7 +192,7 @@ class MapFragment : Fragment(), LocationListener {
     fun showPointsOfInterest()
     {
         map.overlays.forEach {
-            if(it != path && it != marker && it != route && it != destinationMarker) {
+            if(it != path && it != marker && it != route ) {
                 it as Marker
                 it.alpha = 1f
             }
@@ -204,7 +203,7 @@ class MapFragment : Fragment(), LocationListener {
     fun createPointsOfInterest() {
         CoroutineScope(Dispatchers.Unconfined).launch {
             val overlays: MutableList<Overlay> = mutableListOf()
-            map.overlays.removeAll { it != marker && it != path && it != route && it != destinationMarker } // Remove old overlays if any exist
+            map.overlays.removeAll { it != marker && it != path && it != route } // Remove old overlays if any exist
             pois.forEach {
                 val poimarker = Marker(map)
                 if(it.thumbnail != null) poimarker.icon = BitmapDrawable(resources, it.mThumbnail.scale(100, 100))
