@@ -2,6 +2,7 @@ package com.example.routetracker
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.SharedPreferences
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.drawable.BitmapDrawable
@@ -24,6 +25,7 @@ import androidx.fragment.app.Fragment
 import androidx.preference.PreferenceManager
 import com.example.routetracker.helpers.*
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import com.google.gson.Gson
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -61,7 +63,6 @@ class MapFragment : Fragment(), LocationListener {
     private lateinit var disappear: Animation
     private lateinit var rotateclock: Animation
     private lateinit var rotateanticlock: Animation
-
 
     var panning = true
 
@@ -171,6 +172,15 @@ class MapFragment : Fragment(), LocationListener {
         lm.removeUpdates(this)
     }
 
+    override fun onPause() {
+        super.onPause()
+        onSave()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        onLoad()
+    }
 
     /* MAP */
     private fun createOverlays() {
@@ -353,4 +363,23 @@ class MapFragment : Fragment(), LocationListener {
         }
     }
 
+    private fun onSave(){
+        val json = Gson().toJson(path)
+        val sharedPreferences: SharedPreferences = this.requireActivity().getSharedPreferences("pref",
+            Context.MODE_PRIVATE)
+        val editor = sharedPreferences.edit()
+        editor.putString("Polyline", json)
+        editor.putBoolean("toggle tag", toggle.tag as Boolean)
+        if(toggle.tag==false){
+            editor.clear()
+        }
+        editor.commit()
+    }
+    private fun onLoad(){
+        val json = Gson().toJson(path)
+        val sharedPreferences: SharedPreferences = this.requireActivity().getSharedPreferences("pref",
+            Context.MODE_PRIVATE)
+            sharedPreferences.getString("Polyline", json)
+             sharedPreferences.getBoolean("toggle tag", toggle.tag as Boolean)
+    }
 }
