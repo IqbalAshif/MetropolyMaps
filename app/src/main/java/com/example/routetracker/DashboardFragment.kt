@@ -10,6 +10,7 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import com.example.routetracker.helpers.fetchPointsOfInterest
 import com.example.routetracker.sensors.StepSensor
@@ -48,18 +49,34 @@ class DashboardFragment(private var mapFragment: MapFragment) : Fragment() {
         view.findViewById<Button>(R.id.cardView5).also { it.setOnClickListener { onClick(it) } }
         view.findViewById<Button>(R.id.cardView6).also { it.setOnClickListener { onClick(it) } }
 
+        // Smart Content
+        val notificationlist = view.findViewById<LinearLayout>(R.id.notificationlist)
+
         // Stepcounter
-        stepSensor.enable()
+
+        val stepview = createSmartCard(
+            "Steps",
+            (stepEndCount - stepStartCount).toInt().toString()
+        )
+        stepview.visibility = View.INVISIBLE
+        notificationlist.addView(stepview)
+
         stepSensor.onTriggered = {
+            Log.d("Steps", it.values[0].toString())
             if (stepStartCount == 0f)
                 stepStartCount = it.values[0]
-            else if (stepStartCount != it.values[0])
+            else if (stepStartCount != it.values[0]) {
                 stepEndCount = it.values[0]
+                stepview.findViewById<TextView>(R.id.widecardsubtitle).text =
+                    (stepEndCount - stepStartCount).toInt().toString()
+
+                if (!stepview.isVisible && stepEndCount != stepStartCount) stepview.visibility = View.VISIBLE
+            }
+            Log.e("StepcountStart", stepStartCount.toString())
+            Log.e("StepcountEnd", stepEndCount.toString())
         }
+        stepSensor.enable()
 
-        // Smart Content
-
-        val notificationlist = view.findViewById<LinearLayout>(R.id.notificationlist)
 
         fetchPointsOfInterest("Attractions", mapFragment.map.boundingBox) { pois ->
             val cards = mutableListOf<View>()
@@ -89,14 +106,6 @@ class DashboardFragment(private var mapFragment: MapFragment) : Fragment() {
 
         }
 
-        if (stepEndCount != 0f) {
-            notificationlist.addView(
-                createSmartCard(
-                    "Steps",
-                    (stepEndCount - stepStartCount).toString()
-                )
-            )
-        }
 
         return view
     }
@@ -107,7 +116,7 @@ class DashboardFragment(private var mapFragment: MapFragment) : Fragment() {
     }
 
     private fun createSmartCard(title: String, subtitle: String): View {
-        val v = LayoutInflater.from(context).inflate(R.layout.view_widecard,null ).also {
+        val v = LayoutInflater.from(context).inflate(R.layout.view_widecard, null).also {
             if (it.tag != null) it.setOnClickListener { onClick(it) }
         }
         val titleTextView = v.findViewById<TextView>(R.id.widecardtitle)
@@ -118,34 +127,31 @@ class DashboardFragment(private var mapFragment: MapFragment) : Fragment() {
         return v
     }
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+    }
+
     override fun onPause() {
         super.onPause()
+        Log.e("Pause", "Paused")
         stepSensor.disable()
         val sharedPreferences = this.requireActivity()
             .getSharedPreferences("pref", Context.MODE_PRIVATE)
         var editor = sharedPreferences.edit()
-        val steps = stepEndCount-stepStartCount
-        editor.putFloat("stepCounter", steps)
+        editor.putFloat("stepcounterstart", stepStartCount)
+        editor.putFloat("stepcounterend", stepEndCount)
         editor.commit()
     }
 
-    override fun onStop() {
-        super.onStop()
-        stepSensor.disable()
-        val sharedPreferences = this.requireActivity()
-            .getSharedPreferences("pref", Context.MODE_PRIVATE)
-        var editor = sharedPreferences.edit()
-        val steps = stepEndCount-stepStartCount
-        editor.putFloat("stepCounter", steps)
-        editor.commit()
-    }
     override fun onResume() {
+        Log.e("Resume", "Resumed")
         super.onResume()
         stepSensor.enable()
         val sharedPreferences = this.requireActivity()
             .getSharedPreferences("pref", Context.MODE_PRIVATE)
-        var editor = sharedPreferences.edit()
-        editor.putFloat("stepCounter", stepEndCount)
+        stepStartCount = sharedPreferences.getFloat("stepcounterstart", 0f)
+        stepEndCount = sharedPreferences.getFloat("stepcounterend", 0f)
     }
 
     private fun onClick(view: View) {

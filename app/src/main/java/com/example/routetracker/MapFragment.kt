@@ -54,7 +54,7 @@ class MapFragment : Fragment(), LocationListener {
     var route: Overlay? = null
     val poiMarkers: MutableList<Overlay> = mutableListOf()
 
-    private lateinit var toggle: FloatingActionButton
+    lateinit var toggle: FloatingActionButton
     private lateinit var info: FloatingActionButton
     private lateinit var close: FloatingActionButton
 
@@ -162,8 +162,6 @@ class MapFragment : Fragment(), LocationListener {
         }
 
 
-
-
         return view
     }
 
@@ -269,6 +267,10 @@ class MapFragment : Fragment(), LocationListener {
             panning = true
             toggle.startAnimation(rotateanticlock)
             toggle.setImageResource(R.drawable.ic_baseline_locationoff)
+
+            val sharedPreferences = this.requireActivity()
+                .getSharedPreferences("pref", Context.MODE_PRIVATE)
+            sharedPreferences.edit().clear().commit()
         }
 
         // Stop recording
