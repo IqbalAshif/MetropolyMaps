@@ -1,18 +1,18 @@
-# Route Tracker
-Map application for Android!
-#Functionalities
--Map
--Step Tracker
--Location Tracker
--Point of Interests
--Service Finder
--Direction
--Heatmap
+# Route Tracker<br/>
+Map application for Android!<br/>
+#Functionalities<br/>
+-Map<br/>
+-Step Tracker<br/>
+-Location Tracker<br/>
+-Point of Interests<br/>
+-Service Finder<br/>
+-Direction<br/>
+-Heatmap<br/>
 
-#Tools and technologies
--Open Street Map
--Coroutines
--Material Design
+#Tools and technologies<br/>
+-Open Street Map<br/>
+-Coroutines<br/>
+-Material Design<br/>
 -Android Sensors
 
 
