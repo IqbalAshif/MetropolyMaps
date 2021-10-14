@@ -70,7 +70,8 @@ class DashboardFragment(private var mapFragment: MapFragment) : Fragment() {
                 stepview.findViewById<TextView>(R.id.widecardsubtitle).text =
                     (stepEndCount - stepStartCount).toInt().toString()
 
-                if (!stepview.isVisible && stepEndCount != stepStartCount) stepview.visibility = View.VISIBLE
+                if (!stepview.isVisible && stepEndCount != stepStartCount) stepview.visibility =
+                    View.VISIBLE
             }
             Log.e("StepcountStart", stepStartCount.toString())
             Log.e("StepcountEnd", stepEndCount.toString())

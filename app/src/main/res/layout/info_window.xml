@@ -15,6 +15,8 @@
         android:textColor="#151414"
         android:textSize="20sp"
         android:textStyle="bold"
+        android:paddingLeft="5dp"
+        android:paddingRight="5dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.498"
@@ -36,18 +38,16 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/tvTitle" />
 
-    <Button
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/btRoute"
-        android:layout_width="wrap_content"
+        style="@style/Widget.MaterialComponents.Button.Icon"
+        android:layout_width="50dp"
         android:layout_height="match_parent"
-        android:background="@drawable/ic_baseline_directions_24"
-        android:drawableTint="@color/infoWindow"
+        android:backgroundTint="@color/infoWindow"
         android:contentDescription="@string/showRoute"
-        android:textAlignment="viewEnd"
-        android:textSize="20sp"
+        app:icon="@drawable/ic_directions_black_24dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.571"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/tvTitle"
         app:layout_constraintVertical_bias="1.0" />

@@ -91,15 +91,19 @@ class MapFragment : Fragment(), LocationListener {
         map.isTilesScaledToDpi = true
         map.setMultiTouchControls(true)
         map.controller.setZoom(3.0)
-        map.setOnTouchListener { v, e -> run {
-            if(e.action == MotionEvent.ACTION_DOWN) v.tag = true // If drag possibly started
-            else if(e.action == MotionEvent.ACTION_MOVE && v.tag == true) {
-                if(!panning) {info.startAnimation(appear); Log.d("Panning: ","true")}
-                panning = true
-            } // Is drag not click
-            else v.tag = false // It was not a drag
-            false
-        } }
+        map.setOnTouchListener { v, e ->
+            run {
+                if (e.action == MotionEvent.ACTION_DOWN) v.tag = true // If drag possibly started
+                else if (e.action == MotionEvent.ACTION_MOVE && v.tag == true) {
+                    if (!panning) {
+                        info.startAnimation(appear); Log.d("Panning: ", "true")
+                    }
+                    panning = true
+                } // Is drag not click
+                else v.tag = false // It was not a drag
+                false
+            }
+        }
         map.addMapListener(object : MapAdapter() {
             override fun onZoom(event: ZoomEvent?): Boolean {
                 if (event != null && pois.isNotEmpty())
@@ -191,7 +195,12 @@ class MapFragment : Fragment(), LocationListener {
 
         // Position
         marker = Marker(map)
-        marker.setOnMarkerClickListener { _, _ -> if(panning) info.startAnimation(disappear); panning = false; Log.d("Panning: ","false"); true }
+        marker.setOnMarkerClickListener { _, _ ->
+            if (panning) info.startAnimation(disappear); panning = false; Log.d(
+            "Panning: ",
+            "false"
+        ); true
+        }
         marker.icon =
             AppCompatResources.getDrawable(this.requireContext(), R.drawable.ic_baseline_position)
         marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
@@ -199,14 +208,12 @@ class MapFragment : Fragment(), LocationListener {
         map.overlays.add(marker)
     }
 
-    fun hidePointsOfInterest()
-    {
-        poiMarkers.forEach { it as Marker; it.alpha = 0f}
+    fun hidePointsOfInterest() {
+        poiMarkers.forEach { it as Marker; it.alpha = 0f }
     }
 
-    fun showPointsOfInterest()
-    {
-        poiMarkers.forEach { it as Marker; it.alpha = 1f}
+    fun showPointsOfInterest() {
+        poiMarkers.forEach { it as Marker; it.alpha = 1f }
 
     }
 
@@ -216,7 +223,8 @@ class MapFragment : Fragment(), LocationListener {
             map.overlays.removeAll(poiMarkers) // Remove old overlays if any exist
             pois.forEach { poi ->
                 val poimarker = Marker(map)
-                if(poi.thumbnail != null) poimarker.icon = BitmapDrawable(resources, poi.mThumbnail.scale(100, 100))
+                if (poi.thumbnail != null) poimarker.icon =
+                    BitmapDrawable(resources, poi.mThumbnail.scale(100, 100))
                 poimarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
                 poimarker.position = poi.mLocation
                 poimarker.isFlat = true
@@ -225,12 +233,17 @@ class MapFragment : Fragment(), LocationListener {
                 infoWindow.setTitle(poi.mDescription.takeWhile { it != ',' })
                 infoWindow.setType(poi.mType)
                 infoWindow.onRoute = {
-                    destination = poimarker.position
-                    path.setPoints(listOf())
-                    navigationModeLocation(marker.position)
+                    if (marker.position != null && marker.position != GeoPoint(0.0, 0.0, 0.0)) {
+                        Log.e("Position", marker.position.toString())
+                        destination = poimarker.position
+                        path.setPoints(listOf())
+                        navigationModeLocation(marker.position)
 
-                    if(!close.isVisible)
-                        close.visibility = View.VISIBLE
+                        if (!close.isVisible)
+                            close.visibility = View.VISIBLE
+                    } else {
+                        Toast.makeText(context, "Please enable location", Toast.LENGTH_LONG).show()
+                    }
                 }
                 poimarker.infoWindow = infoWindow
                 poimarker.closeInfoWindow()
@@ -250,7 +263,7 @@ class MapFragment : Fragment(), LocationListener {
     private fun enableGps() {
         if (locationProvider(requireContext()) != null) {
             toggle.tag = true
-            if(panning) info.startAnimation(disappear)
+            if (panning) info.startAnimation(disappear)
             panning = false
             toggle.startAnimation(rotateclock)
             lm.requestLocationUpdates(locationProvider(requireContext())!!, 1000, 15f, this)
@@ -262,8 +275,8 @@ class MapFragment : Fragment(), LocationListener {
         toggle.tag = false
 
         if (animation) {
-            Log.d("DisableGps: ","Animated")
-            if(!panning) info.startAnimation(appear)
+            Log.d("DisableGps: ", "Animated")
+            if (!panning) info.startAnimation(appear)
             panning = true
             toggle.startAnimation(rotateanticlock)
             toggle.setImageResource(R.drawable.ic_baseline_locationoff)
@@ -286,7 +299,7 @@ class MapFragment : Fragment(), LocationListener {
 
 
     override fun onProviderEnabled(provider: String) {
-        if(toggle.tag == false)
+        if (toggle.tag == false)
             toggle.setImageResource(R.drawable.ic_baseline_locationoff)
         else {
             toggle.startAnimation(rotateclock)
@@ -308,21 +321,20 @@ class MapFragment : Fragment(), LocationListener {
 
     override fun onLocationChanged(p0: Location) {
         Log.d("GEOLOCATION", "new latitude: ${p0.latitude} and longitude: ${p0.longitude}")
-        if(!close.isVisible) // Follow mode
+        if (!close.isVisible) // Follow mode
             pathingModeLocation(GeoPoint(p0.latitude, p0.longitude))
-        else if(destination != null) // Navigation mode
+        else if (destination != null) // Navigation mode
             navigationModeLocation(GeoPoint(p0.latitude, p0.longitude))
 
     }
 
-    private fun navigationModeLocation(location : GeoPoint)
-    {
+    private fun navigationModeLocation(location: GeoPoint) {
         updateMarker(location)
         if (!panning) map.controller.setCenter(location)
 
-        createPath(context, destination!!,location){
+        createPath(context, destination!!, location) {
             // Path
-            if(it != null) {
+            if (it != null) {
                 if (route != null) {
                     map.overlays.remove(route)
                 }
@@ -334,8 +346,7 @@ class MapFragment : Fragment(), LocationListener {
         }
     }
 
-    private fun pathingModeLocation(location : GeoPoint)
-    {
+    private fun pathingModeLocation(location: GeoPoint) {
         updateMarker(location)
 
         if (path.actualPoints.isEmpty()) // First location
@@ -352,12 +363,12 @@ class MapFragment : Fragment(), LocationListener {
         map.invalidate()
     }
 
-    private fun updateMarker(location : GeoPoint)
-    {
+    private fun updateMarker(location: GeoPoint) {
         // Marker
         marker.position = location
         marker.title =
-            location.longitude.roundToDecimal(5).toString() + ',' + location.latitude.roundToDecimal(5)
+            location.longitude.roundToDecimal(5)
+                .toString() + ',' + location.latitude.roundToDecimal(5)
                 .toString()
 
         CoroutineScope(Dispatchers.IO).launch {
@@ -365,23 +376,28 @@ class MapFragment : Fragment(), LocationListener {
         }
     }
 
-    private fun onSave(){
+    private fun onSave() {
         val json = Gson().toJson(path)
-        val sharedPreferences: SharedPreferences = this.requireActivity().getSharedPreferences("pref",
-            Context.MODE_PRIVATE)
+        val sharedPreferences: SharedPreferences = this.requireActivity().getSharedPreferences(
+            "pref",
+            Context.MODE_PRIVATE
+        )
         val editor = sharedPreferences.edit()
         editor.putString("Polyline", json)
         editor.putBoolean("toggle tag", toggle.tag as Boolean)
-        if(toggle.tag==false){
+        if (toggle.tag == false) {
             editor.clear()
         }
         editor.commit()
     }
-    private fun onLoad(){
+
+    private fun onLoad() {
         val json = Gson().toJson(path)
-        val sharedPreferences: SharedPreferences = this.requireActivity().getSharedPreferences("pref",
-            Context.MODE_PRIVATE)
-            sharedPreferences.getString("Polyline", json)
-             sharedPreferences.getBoolean("toggle tag", toggle.tag as Boolean)
+        val sharedPreferences: SharedPreferences = this.requireActivity().getSharedPreferences(
+            "pref",
+            Context.MODE_PRIVATE
+        )
+        sharedPreferences.getString("Polyline", json)
+        sharedPreferences.getBoolean("toggle tag", toggle.tag as Boolean)
     }
 }

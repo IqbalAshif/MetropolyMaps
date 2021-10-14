@@ -22,7 +22,7 @@ import org.osmdroid.views.overlay.Polyline
 import java.io.IOException
 import java.lang.Error
 
-fun getAddress(context : Context?, point: GeoPoint): String {
+fun getAddress(context: Context?, point: GeoPoint): String {
     return try {
         val geocoder = Geocoder(context)
         val list = geocoder.getFromLocation(point.latitude, point.longitude, 1)
@@ -32,25 +32,23 @@ fun getAddress(context : Context?, point: GeoPoint): String {
     }
 }
 
-fun parseLocation(address : String) : GeoPoint?
-{
+fun parseLocation(address: String): GeoPoint? {
 
-    val arg : List<String> = if(address.startsWith("geo:",ignoreCase = true))
-        address.drop("geo:".count()).split(',','?') // [Long, lat, parameters]
+    val arg: List<String> = if (address.startsWith("geo:", ignoreCase = true))
+        address.drop("geo:".count()).split(',', '?') // [Long, lat, parameters]
     else
-        address.split(',','?') // [Long, lat, parameters]
+        address.split(',', '?') // [Long, lat, parameters]
 
     return try {
-        GeoPoint(arg[0].toDouble(),arg[1].toDouble())
-    } catch (err : Error) {
+        GeoPoint(arg[0].toDouble(), arg[1].toDouble())
+    } catch (err: Error) {
         null
     }
 }
 
 val userAgent = BuildConfig.APPLICATION_ID + "/" + BuildConfig.VERSION_NAME
 
-fun fetchPointsOfInterest(request: String, box: BoundingBox, result : (List<POI>) -> Unit)
-{
+fun fetchPointsOfInterest(request: String, box: BoundingBox, result: (List<POI>) -> Unit) {
     CoroutineScope(Dispatchers.IO).launch {
         val poiProvider = NominatimPOIProvider(userAgent)
         try {
@@ -67,13 +65,19 @@ fun fetchPointsOfInterest(request: String, box: BoundingBox, result : (List<POI>
     }
 }
 
-fun fetchPointsOfInterestUrl(query: String, result : (List<POI>) -> Unit)
-{
+fun fetchPointsOfInterestUrl(query: String, result: (List<POI>) -> Unit) {
     CoroutineScope(Dispatchers.IO).launch {
         val poiProvider = NominatimPOIProvider(userAgent)
         try {
             val poitemp = mutableListOf<POI>()
-            poiProvider.getThem("https://nominatim.openstreetmap.org/search?format=json&q=${query.replace(" ","%20")}&limit=10")
+            poiProvider.getThem(
+                "https://nominatim.openstreetmap.org/search?format=json&q=${
+                    query.replace(
+                        " ",
+                        "%20"
+                    )
+                }&limit=10"
+            )
             Log.d("Points of Interest", poitemp.size.toString())
             result(poitemp)
         } catch (exp: NullPointerException) { // Network Error
@@ -84,18 +88,21 @@ fun fetchPointsOfInterestUrl(query: String, result : (List<POI>) -> Unit)
 }
 
 
-fun createPath(context: Context?, startPoint: GeoPoint, endPoint: GeoPoint, onFinished: (Polyline?) -> Unit)
-{
+fun createPath(
+    context: Context?,
+    startPoint: GeoPoint,
+    endPoint: GeoPoint,
+    onFinished: (Polyline?) -> Unit
+) {
     val routePoints = ArrayList<GeoPoint>()
     routePoints.add(startPoint)
     routePoints.add(endPoint)
-     CoroutineScope(Dispatchers.IO).launch {
-         onFinished(getPath(context, routePoints))
+    CoroutineScope(Dispatchers.IO).launch {
+        onFinished(getPath(context, routePoints))
     }
 }
 
-fun getPath( context: Context?, waypoints: ArrayList<GeoPoint>) : Polyline?
-{
+fun getPath(context: Context?, waypoints: ArrayList<GeoPoint>): Polyline? {
     // Retrieving road
     val roadManager = OSRMRoadManager(context, userAgent)
     roadManager.setMean(OSRMRoadManager.MEAN_BY_FOOT)

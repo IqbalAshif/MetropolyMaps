@@ -46,6 +46,7 @@ class MarkerWindow(val context: Context, mapView: MapView, val mapFragment: MapF
     fun setTitle(title: String) {
         view.findViewById<TextView>(R.id.tvTitle).text = title
     }
+
     fun setType(type: String) {
         view.findViewById<TextView>(R.id.tvType).text = type
     }
